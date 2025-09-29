@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Moon, Sun, Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -88,7 +90,9 @@ export default function Header() {
                 <Sun className="h-5 w-5" />
               )}
             </Button>
-            <Button className="ml-4">Đăng nhập</Button>
+            <Button className="ml-4" onClick={() => navigate("/login")}>
+              Đăng nhập
+            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -136,7 +140,15 @@ export default function Header() {
                     3
                   </span>
                 </Button>
-                <Button className="flex-1">Đăng nhập</Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    navigate("/login");
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  Đăng nhập
+                </Button>
               </div>
             </div>
           </div>
