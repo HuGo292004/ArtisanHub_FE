@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Sun, Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -9,6 +9,9 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +20,46 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        setIsLoggedIn(Boolean(token));
+        if (!token) setIsProfileOpen(false);
+      } catch {
+        setIsLoggedIn(false);
+      }
+    };
+    checkAuth();
+    const onStorage = (e) => {
+      if (e.key === "access_token") checkAuth();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
+      }
+    };
+    if (isProfileOpen) document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [isProfileOpen]);
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+    } catch {
+      // ignore storage errors
+    }
+    setIsLoggedIn(false);
+    setIsProfileOpen(false);
+    navigate("/", { replace: true });
+  };
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -80,9 +123,36 @@ export default function Header() {
                 3
               </span>
             </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
+            {isLoggedIn && (
+              <div className="relative" ref={profileRef}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsProfileOpen((v) => !v)}
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md border border-artisan-brown-200 dark:border-artisan-brown-800 bg-white dark:bg-artisan-brown-900 shadow-lg py-1 z-[60]">
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-artisan-brown-800 dark:text-artisan-brown-100 hover:bg-artisan-brown-50 dark:hover:bg-artisan-brown-800"
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        navigate("/profile");
+                      }}
+                    >
+                      Thông tin cá nhân
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                      onClick={handleLogout}
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === "light" ? (
                 <Moon className="h-5 w-5" />
@@ -90,9 +160,11 @@ export default function Header() {
                 <Sun className="h-5 w-5" />
               )}
             </Button>
-            <Button className="ml-4" onClick={() => navigate("/login")}>
-              Đăng nhập
-            </Button>
+            {!isLoggedIn && (
+              <Button className="ml-4" onClick={() => navigate("/login")}>
+                Đăng nhập
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -140,15 +212,17 @@ export default function Header() {
                     3
                   </span>
                 </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    navigate("/login");
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  Đăng nhập
-                </Button>
+                {!isLoggedIn && (
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      navigate("/login");
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    Đăng nhập
+                  </Button>
+                )}
               </div>
             </div>
           </div>
