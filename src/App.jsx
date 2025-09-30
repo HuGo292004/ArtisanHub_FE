@@ -1,4 +1,5 @@
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ToastProvider } from "@/components/ui/Toast";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
@@ -8,6 +9,7 @@ import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { LayoutLogin } from "@/components/Login/LayoutLogin";
+import { LayoutRegister } from "./components/Register/LayoutRegister";
 
 function MainLayout() {
   return (
@@ -34,14 +36,17 @@ function HomePage() {
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="artisan-ui-theme">
-      <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<HomePage />} />
-          </Route>
-          <Route path="/login" element={<LayoutLogin />} />
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<HomePage />} />
+            </Route>
+            <Route path="/login" element={<LayoutLogin />} />
+            <Route path="/register" element={<LayoutRegister />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

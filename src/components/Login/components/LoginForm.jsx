@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { login } from "@/services/authService";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/Toast";
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -8,9 +9,21 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const toast = useToast();
 
   return (
     <section className="flex items-center justify-center">
+      {successMsg && (
+        <div className="fixed top-4 right-4 z-[100] rounded-lg border border-green-400/40 bg-green-600/90 px-4 py-3 text-sm text-white shadow-lg">
+          {successMsg}
+        </div>
+      )}
+      {errorMsg && (
+        <div className="fixed top-4 right-4 mt-12 z-[100] rounded-lg border border-red-400/40 bg-red-600/90 px-4 py-3 text-sm text-white shadow-lg">
+          {errorMsg}
+        </div>
+      )}
       <div className="w-full max-w-md rounded-2xl border border-white/15 bg-white/5 p-10 shadow-2xl backdrop-blur-lg">
         <h2 className="text-center text-3xl lg:text-4xl font-bold tracking-wide text-white">
           Đăng nhập
@@ -24,18 +37,22 @@ export default function LoginForm() {
           onSubmit={async (e) => {
             e.preventDefault();
             setErrorMsg("");
+            setSuccessMsg("");
             setIsSubmitting(true);
             try {
               const res = await login({ email, password });
               const token = res?.data?.token;
               if (token) {
                 localStorage.setItem("access_token", token);
-                navigate("/", { replace: true });
+                setSuccessMsg("Đăng nhập thành công.");
+                toast.success("Đăng nhập thành công.");
+                setTimeout(() => navigate("/", { replace: true }), 800);
               } else {
                 throw new Error("Token không hợp lệ");
               }
             } catch (err) {
               setErrorMsg(err?.message || "Đăng nhập thất bại");
+              toast.error(err?.message || "Đăng nhập thất bại");
             } finally {
               setIsSubmitting(false);
             }
@@ -83,11 +100,7 @@ export default function LoginForm() {
             />
           </div>
 
-          {errorMsg && (
-            <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm text-red-200">
-              {errorMsg}
-            </div>
-          )}
+          {/* Thông báo đã chuyển lên góc trên bên phải */}
 
           <button
             type="submit"
@@ -111,5 +124,3 @@ export default function LoginForm() {
     </section>
   );
 }
-
-
