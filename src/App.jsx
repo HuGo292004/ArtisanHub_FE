@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@/contexts/ThemeContext";
+// Dark mode removed: ThemeProvider no longer used
 import { ToastProvider } from "@/components/ui/Toast";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -35,19 +35,17 @@ function HomePage() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="artisan-ui-theme">
-      <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<HomePage />} />
-            </Route>
-            <Route path="/login" element={<LayoutLogin />} />
-            <Route path="/register" element={<LayoutRegister />} />
-          </Routes>
-        </BrowserRouter>
-      </ToastProvider>
-    </ThemeProvider>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<HomePage />} />
+          </Route>
+          <Route path="/login" element={<LayoutLogin />} />
+          <Route path="/register" element={<LayoutRegister />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

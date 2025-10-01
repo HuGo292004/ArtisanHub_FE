@@ -110,7 +110,7 @@ export default function Hero() {
                 </div>
 
                 {/* Floating cards */}
-                <div className="absolute -top-4 -left-4 bg-white dark:bg-artisan-brown-900 rounded-xl p-4 shadow-lg animate-float">
+                <div className="absolute top-4 -left-4 bg-white dark:bg-artisan-brown-900 rounded-xl p-4 shadow-lg animate-float">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm font-medium text-artisan-brown-900 dark:text-artisan-brown-50">

@@ -58,7 +58,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-artisan-brown-900 dark:bg-artisan-brown-950 text-artisan-brown-100">
+    <footer className="bg-artisan-gold-500 text-artisan-brown-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main footer content */}
         <div className="py-16 grid lg:grid-cols-6 gap-8">
@@ -69,7 +69,7 @@ export default function Footer() {
                 <span className="text-white font-bold text-xl">A</span>
               </div>
               <div>
-                <h3 className="font-display text-2xl font-bold text-white">
+                <h3 className="font-display text-2xl font-bold text-artisan-brown-900">
                   ArtisanHub
                 </h3>
                 <p className="text-artisan-brown-300 text-sm">
@@ -110,7 +110,7 @@ export default function Footer() {
                 <a
                   key={index}
                   href={social.href}
-                  className={`w-10 h-10 rounded-full bg-artisan-brown-800 flex items-center justify-center text-artisan-brown-300 transition-colors duration-200 ${social.color}`}
+                  className={`w-10 h-10 rounded-full bg-artisan-gold-600 flex items-center justify-center text-artisan-brown-900 transition-colors duration-200 ${social.color}`}
                 >
                   <social.icon className="h-5 w-5" />
                 </a>
@@ -121,7 +121,7 @@ export default function Footer() {
           {/* Footer sections */}
           {footerSections.map((section, index) => (
             <div key={index} className="space-y-4">
-              <h4 className="font-display font-semibold text-lg text-white">
+              <h4 className="font-display font-semibold text-lg text-artisan-brown-900">
                 {section.title}
               </h4>
               <ul className="space-y-3">
@@ -144,7 +144,7 @@ export default function Footer() {
         <div className="py-8 border-t border-artisan-brown-800">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <div>
-              <h4 className="font-display text-xl font-semibold text-white mb-2">
+              <h4 className="font-display text-xl font-semibold text-artisan-brown-900 mb-2">
                 Đăng ký nhận tin tức
               </h4>
               <p className="text-artisan-brown-300">
@@ -156,7 +156,7 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Nhập email của bạn"
-                className="flex-1 px-4 py-3 rounded-lg bg-artisan-brown-800 border border-artisan-brown-700 text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
+                className="flex-1 px-4 py-3 rounded-lg bg-artisan-gold-600 border border-artisan-gold-500 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
               />
               <button className="gradient-gold text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-shadow duration-200">
                 Đăng ký
