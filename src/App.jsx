@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { LayoutLogin } from "@/components/Login/LayoutLogin";
 import { LayoutRegister } from "./components/Register/LayoutRegister";
+import AboutPage from "@/components/About/AboutPage";
 
 function MainLayout() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Routes>
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Route>
           <Route path="/login" element={<LayoutLogin />} />
           <Route path="/register" element={<LayoutRegister />} />
