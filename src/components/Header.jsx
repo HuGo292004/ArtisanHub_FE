@@ -64,7 +64,7 @@ export default function Header() {
     { name: "Sản phẩm", href: "/#products" },
     { name: "Nghệ nhân", href: "/#artisans" },
     { name: "Về chúng tôi", href: "/about" },
-    { name: "Liên hệ", href: "/#contact" },
+    { name: "Liên hệ", href: "/contact" },
   ];
 
   return (
@@ -84,7 +84,7 @@ export default function Header() {
               <h1 className="font-display text-xl lg:text-2xl font-bold text-artisan-brown-900">
                 ArtisanHub
               </h1>
-              <p className="text-xs text-artisan-brown-800 hidden sm:block">
+              <p className="text-xs text-white hidden sm:block">
                 Nghệ thuật thủ công
               </p>
             </div>

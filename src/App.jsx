@@ -11,6 +11,7 @@ import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { LayoutLogin } from "@/components/Login/LayoutLogin";
 import { LayoutRegister } from "./components/Register/LayoutRegister";
 import AboutPage from "@/components/About/AboutPage";
+import ContactPage from "@/components/Contact/ContactPage";
 
 function MainLayout() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
           </Route>
           <Route path="/login" element={<LayoutLogin />} />
           <Route path="/register" element={<LayoutRegister />} />
