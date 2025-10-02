@@ -60,11 +60,11 @@ export default function Header() {
   };
 
   const navItems = [
-    { name: "Trang chủ", href: "#" },
-    { name: "Sản phẩm", href: "#products" },
-    { name: "Nghệ nhân", href: "#artisans" },
-    { name: "Về chúng tôi", href: "#about" },
-    { name: "Liên hệ", href: "#contact" },
+    { name: "Trang chủ", href: "/" },
+    { name: "Sản phẩm", href: "/#products" },
+    { name: "Nghệ nhân", href: "/#artisans" },
+    { name: "Về chúng tôi", href: "/about" },
+    { name: "Liên hệ", href: "/#contact" },
   ];
 
   return (
@@ -147,7 +147,11 @@ export default function Header() {
             )}
             {/* Dark mode toggle removed */}
             {!isLoggedIn && (
-              <Button className="ml-4" onClick={() => navigate("/login")}>
+              <Button
+                className="ml-4"
+                variant="ghost"
+                onClick={() => navigate("/login")}
+              >
                 Đăng nhập
               </Button>
             )}
