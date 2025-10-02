@@ -9,7 +9,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden hero-pattern">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-artisan-brown-950">
       {/* Background decorative elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-20 h-20 bg-artisan-gold-400/20 rounded-full blur-xl animate-float"></div>
