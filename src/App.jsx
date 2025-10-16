@@ -12,6 +12,7 @@ import { LayoutLogin } from "@/components/Login/LayoutLogin";
 import { LayoutRegister } from "./components/Register/LayoutRegister";
 import AboutPage from "@/components/About/AboutPage";
 import ContactPage from "@/components/Contact/ContactPage";
+import { ArtistLayout } from "./components/Artist/ArtistLayout";
 
 function MainLayout() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <Routes>
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/artisans" element={<ArtistLayout />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
           </Route>
