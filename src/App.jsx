@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { LayoutLogin } from "@/components/Login/LayoutLogin";
 import { LayoutRegister } from "./components/Register/LayoutRegister";
+import { ForgotPassword } from "./components/ForgotPassword/ForgotPassword";
 import AboutPage from "@/components/About/AboutPage";
 import ContactPage from "@/components/Contact/ContactPage";
 import { ArtistLayout } from "./components/Artist/ArtistLayout";
@@ -49,6 +50,8 @@ function App() {
           </Route>
           <Route path="/login" element={<LayoutLogin />} />
           <Route path="/register" element={<LayoutRegister />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ForgotPassword />} />
         </Routes>
       </BrowserRouter>
     </ToastProvider>

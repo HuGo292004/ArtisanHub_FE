@@ -86,6 +86,12 @@ export default function LoginForm() {
               >
                 Mật khẩu
               </label>
+              <a
+                href="/forgot-password"
+                className="text-sm text-white/80 hover:text-white underline decoration-white/50 underline-offset-2 hover:decoration-white transition-colors"
+              >
+                Quên mật khẩu?
+              </a>
             </div>
             <input
               id="password"

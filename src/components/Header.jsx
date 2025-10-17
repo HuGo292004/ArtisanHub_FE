@@ -62,7 +62,7 @@ export default function Header() {
   const navItems = [
     { name: "Trang chủ", href: "/" },
     { name: "Sản phẩm", href: "/#products" },
-    { name: "Nghệ nhân", href: "/artisans" },
+    { name: "Cửa hàng", href: "/artisans" },
     { name: "Về chúng tôi", href: "/about" },
     { name: "Liên hệ", href: "/contact" },
   ];
