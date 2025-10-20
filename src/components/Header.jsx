@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -10,6 +11,7 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
+  const { cartItemCount } = useCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,7 +63,7 @@ export default function Header() {
 
   const navItems = [
     { name: "Trang chủ", href: "/" },
-    { name: "Sản phẩm", href: "/#products" },
+    { name: "Sản phẩm", href: "/products" },
     { name: "Nghệ nhân", href: "/artisans" },
     { name: "Về chúng tôi", href: "/about" },
     { name: "Liên hệ", href: "/contact" },
@@ -109,11 +111,18 @@ export default function Header() {
             <Button variant="ghost" size="icon" className="relative">
               <Search className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => navigate("/cart")}
+            >
               <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-2 -right-2 bg-artisan-gold-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
-              </span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount > 99 ? "99+" : cartItemCount}
+                </span>
+              )}
             </Button>
             {isLoggedIn && (
               <div className="relative" ref={profileRef}>
@@ -190,11 +199,21 @@ export default function Header() {
                 </a>
               ))}
               <div className="flex items-center space-x-4 pt-4 border-t border-artisan-gold-200">
-                <Button variant="ghost" size="icon" className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  onClick={() => {
+                    navigate("/cart");
+                    setIsMenuOpen(false);
+                  }}
+                >
                   <ShoppingBag className="h-5 w-5" />
-                  <span className="absolute -top-2 -right-2 bg-artisan-gold-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    3
-                  </span>
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartItemCount > 99 ? "99+" : cartItemCount}
+                    </span>
+                  )}
                 </Button>
                 {!isLoggedIn && (
                   <Button

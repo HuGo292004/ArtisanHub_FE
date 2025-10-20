@@ -1,5 +1,6 @@
 // Dark mode removed: ThemeProvider no longer used
 import { ToastProvider } from "@/components/ui/Toast";
+import { CartProvider } from "@/contexts/CartContext";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
@@ -13,6 +14,8 @@ import { LayoutRegister } from "./components/Register/LayoutRegister";
 import AboutPage from "@/components/About/AboutPage";
 import ContactPage from "@/components/Contact/ContactPage";
 import { ArtistLayout } from "./components/Artist/ArtistLayout";
+import { ProductLayout } from "./components/Product/ProductLayout";
+import CartPage from "@/components/Cart/CartPage";
 
 function MainLayout() {
   return (
@@ -39,18 +42,22 @@ function HomePage() {
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/artisans" element={<ArtistLayout />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-          </Route>
-          <Route path="/login" element={<LayoutLogin />} />
-          <Route path="/register" element={<LayoutRegister />} />
-        </Routes>
-      </BrowserRouter>
+      <CartProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/products" element={<ProductLayout />} />
+              <Route path="/artisans" element={<ArtistLayout />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/cart" element={<CartPage />} />
+            </Route>
+            <Route path="/login" element={<LayoutLogin />} />
+            <Route path="/register" element={<LayoutRegister />} />
+          </Routes>
+        </BrowserRouter>
+      </CartProvider>
     </ToastProvider>
   );
 }

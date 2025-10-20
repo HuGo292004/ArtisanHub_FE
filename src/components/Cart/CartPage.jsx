@@ -1,0 +1,285 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  ArrowLeft,
+  CreditCard,
+  Package,
+} from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+
+const CartPage = () => {
+  const navigate = useNavigate();
+  const {
+    cartItems,
+    cartItemCount,
+    loading,
+    error,
+    updateCartItem,
+    removeFromCart,
+    clearCart,
+    getTotalPrice,
+  } = useCart();
+
+  // Format giá tiền
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("vi-VN").format(price);
+  };
+
+  const handleQuantityChange = async (cartItemId, newQuantity) => {
+    if (newQuantity < 1) {
+      await removeFromCart(cartItemId);
+    } else {
+      await updateCartItem(cartItemId, newQuantity);
+    }
+  };
+
+  const handleRemoveItem = async (cartItemId) => {
+    await removeFromCart(cartItemId);
+  };
+
+  const handleClearCart = async () => {
+    if (
+      window.confirm("Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?")
+    ) {
+      await clearCart();
+    }
+  };
+
+  const handleCheckout = () => {
+    // TODO: Implement checkout functionality
+    navigate("/checkout");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-artisan-brown-950 pt-20">
+        <div className="container mx-auto px-4 py-16">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-artisan-gold-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-artisan-brown-950 pt-20">
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <div className="text-red-500 text-lg mb-4">⚠️ {error}</div>
+            <Button onClick={() => window.location.reload()}>Thử lại</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-artisan-brown-950 pt-20">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="text-artisan-gold-400 hover:text-artisan-gold-300"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Quay lại
+            </Button>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <ShoppingCart className="w-8 h-8 text-artisan-gold-400" />
+              Giỏ hàng của bạn
+            </h1>
+          </div>
+          {cartItemCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleClearCart}
+              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Xóa tất cả
+            </Button>
+          )}
+        </div>
+
+        {cartItemCount === 0 ? (
+          /* Empty Cart */
+          <div className="text-center py-16">
+            <div className="bg-artisan-brown-900 rounded-2xl p-12 max-w-md mx-auto">
+              <Package className="w-16 h-16 text-artisan-gold-400 mx-auto mb-6" />
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Giỏ hàng trống
+              </h2>
+              <p className="text-artisan-brown-300 mb-8">
+                Bạn chưa có sản phẩm nào trong giỏ hàng. Hãy khám phá các sản
+                phẩm tuyệt vời của chúng tôi!
+              </p>
+              <Button
+                onClick={() => navigate("/products")}
+                className="bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white px-8 py-3"
+              >
+                Khám phá sản phẩm
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Cart with Items */
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              {cartItems.map((item) => {
+                const product = item.product;
+                const price = product?.discountPrice || product?.price || 0;
+                const totalPrice = price * item.quantity;
+
+                return (
+                  <Card
+                    key={item.cartItemId || item.id}
+                    className="bg-artisan-brown-900 border-artisan-brown-700"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="w-24 h-24 flex-shrink-0">
+                          <img
+                            src={
+                              product?.images ||
+                              "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"
+                            }
+                            alt={product?.name}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src =
+                                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop";
+                            }}
+                          />
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-grow">
+                          <h3 className="text-lg font-semibold text-white mb-2">
+                            {product?.name || "Sản phẩm không tên"}
+                          </h3>
+                          <p className="text-artisan-brown-300 text-sm mb-2">
+                            {product?.category || "Chưa phân loại"}
+                          </p>
+                          <p className="text-artisan-gold-400 font-bold text-lg">
+                            {formatPrice(price)}đ
+                          </p>
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="flex flex-col items-end gap-4">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleQuantityChange(
+                                  item.cartItemId || item.id,
+                                  item.quantity - 1
+                                )
+                              }
+                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                            <span className="text-white font-medium min-w-[2rem] text-center">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleQuantityChange(
+                                  item.cartItemId || item.id,
+                                  item.quantity + 1
+                                )
+                              }
+                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-artisan-gold-400 font-bold text-lg">
+                              {formatPrice(totalPrice)}đ
+                            </p>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              handleRemoveItem(item.cartItemId || item.id)
+                            }
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <Card className="bg-artisan-brown-900 border-artisan-brown-700 sticky top-24">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-bold text-white mb-6">
+                    Tóm tắt đơn hàng
+                  </h2>
+
+                  <div className="space-y-4 mb-6">
+                    <div className="flex justify-between text-artisan-brown-300">
+                      <span>Số sản phẩm:</span>
+                      <span>{cartItemCount} sản phẩm</span>
+                    </div>
+                    <div className="flex justify-between text-white text-lg font-bold">
+                      <span>Tổng tiền:</span>
+                      <span className="text-artisan-gold-400">
+                        {formatPrice(getTotalPrice())}đ
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleCheckout}
+                    className="w-full bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white py-3 mb-4"
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Thanh toán
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/products")}
+                    className="w-full border-artisan-brown-600 text-white hover:bg-artisan-brown-700"
+                  >
+                    Tiếp tục mua sắm
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CartPage;
