@@ -217,7 +217,18 @@ export default function Header() {
                     </span>
                   )}
                 </Button>
-                {!isLoggedIn && (
+                {isLoggedIn ? (
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      navigate("/profile");
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Hồ sơ
+                  </Button>
+                ) : (
                   <Button
                     className="flex-1"
                     onClick={() => {
