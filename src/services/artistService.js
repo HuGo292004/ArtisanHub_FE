@@ -13,6 +13,19 @@ export const artistService = {
     }
   },
 
+  // Lấy thông tin chi tiết một nghệ nhân và sản phẩm của họ
+  getArtistDetail: async (artistId) => {
+    try {
+      const response = await axiosClient.get(
+        `/api/my-products/artist/${artistId}/products`
+      );
+      return response;
+    } catch (error) {
+      console.error("Lỗi khi lấy chi tiết nghệ nhân:", error);
+      throw error;
+    }
+  },
+
   // Lấy thông tin chi tiết một nghệ nhân
   getArtistById: async (artistId) => {
     try {
