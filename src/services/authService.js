@@ -21,5 +21,5 @@ export function register(payload) {
 }
 
 export function getProfile() {
-  return axiosClient.get("/user/me");
+  return axiosClient.get("/api/v1/Account/me");
 }
