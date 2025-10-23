@@ -36,7 +36,7 @@ const ProductCard = ({ product }) => {
   const displayPrice = discountPrice || price;
 
   const handleProductClick = () => {
-    navigate(`/product/${productId}`);
+    navigate(`/products/${productId}`);
   };
 
   const handleAddToCart = async (e) => {
