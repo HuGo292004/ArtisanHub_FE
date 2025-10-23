@@ -1,9 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 
 const ArtistCard = ({ artist }) => {
+  const navigate = useNavigate();
   const {
+    artistId,
     artistName,
     shopName,
     profileImage,
@@ -13,6 +16,10 @@ const ArtistCard = ({ artist }) => {
     experienceYears,
     achievements = [],
   } = artist;
+
+  const handleViewDetail = () => {
+    navigate(`/stores/${artistId}`);
+  };
 
   return (
     <Card className="overflow-hidden artist-card-hover bg-white border border-artisan-brown-200 h-full flex flex-col">
@@ -111,6 +118,7 @@ const ArtistCard = ({ artist }) => {
         {/* Nút hành động - luôn ở dưới cùng */}
         <div className="flex gap-2 mt-4">
           <Button
+            onClick={handleViewDetail}
             className="flex-1 bg-artisan-brown-600 hover:bg-artisan-brown-700 text-white"
             size="sm"
           >
@@ -131,7 +139,7 @@ const ArtistCard = ({ artist }) => {
 
 ArtistCard.propTypes = {
   artist: PropTypes.shape({
-    artistId: PropTypes.number,
+    artistId: PropTypes.number.isRequired,
     artistName: PropTypes.string.isRequired,
     shopName: PropTypes.string.isRequired,
     profileImage: PropTypes.string,

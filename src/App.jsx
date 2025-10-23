@@ -14,8 +14,9 @@ import { LayoutRegister } from "./components/Register/LayoutRegister";
 import AboutPage from "@/components/About/AboutPage";
 import ContactPage from "@/components/Contact/ContactPage";
 import { ArtistLayout } from "./components/Artist/ArtistLayout";
+import { ArtistDetail } from "./components/Artist/ArtistDetail";
 import { ProductLayout } from "./components/Product/ProductLayout";
-import CartPage from "@/components/Cart/CartPage";
+// import CartPage from "@/components/Cart/CartPage";
 
 function MainLayout() {
   return (
@@ -48,10 +49,11 @@ function App() {
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/products" element={<ProductLayout />} />
-              <Route path="/artisans" element={<ArtistLayout />} />
+              <Route path="/stores" element={<ArtistLayout />} />
+              <Route path="/stores/:id" element={<ArtistDetail />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/cart" element={<CartPage />} />
+              {/* <Route path="/cart" element={<CartPage />} /> */}
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />

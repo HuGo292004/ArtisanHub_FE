@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -64,7 +64,7 @@ export default function Header() {
   const navItems = [
     { name: "Trang chủ", href: "/" },
     { name: "Sản phẩm", href: "/products" },
-    { name: "Nghệ nhân", href: "/artisans" },
+    { name: "Cửa hàng", href: "/stores" },
     { name: "Về chúng tôi", href: "/about" },
     { name: "Liên hệ", href: "/contact" },
   ];
@@ -78,19 +78,21 @@ export default function Header() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
-              <span className="text-white font-bold text-xl">A</span>
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
+                <span className="text-white font-bold text-xl">A</span>
+              </div>
+              <div>
+                <h1 className="font-display text-xl lg:text-2xl font-bold text-artisan-brown-900">
+                  ArtisanHub
+                </h1>
+                <p className="text-xs text-white hidden sm:block">
+                  Nghệ thuật thủ công
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-display text-xl lg:text-2xl font-bold text-artisan-brown-900">
-                ArtisanHub
-              </h1>
-              <p className="text-xs text-white hidden sm:block">
-                Nghệ thuật thủ công
-              </p>
-            </div>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">

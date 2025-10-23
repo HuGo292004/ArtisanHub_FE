@@ -10,6 +10,11 @@ export const ArtistLayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredArtists, setFilteredArtists] = useState([]);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12); // 6 items per page
+  const [totalPages, setTotalPages] = useState(1);
+
   // Filter states
   const [filters, setFilters] = useState({
     specialty: "",
@@ -20,6 +25,7 @@ export const ArtistLayout = () => {
 
   // Lấy danh sách unique values cho filters
   const getUniqueValues = (key) => {
+    if (!Array.isArray(artists)) return [];
     const values = artists
       .map((artist) => artist[key])
       .filter((value) => value && value !== null && value !== "")
@@ -36,6 +42,7 @@ export const ArtistLayout = () => {
       hasAchievements: "",
     });
     setSearchTerm("");
+    setCurrentPage(1); // Reset về trang đầu khi reset filter
   };
 
   useEffect(() => {
@@ -44,18 +51,9 @@ export const ArtistLayout = () => {
         setLoading(true);
         // Gọi API thực tế để lấy danh sách nghệ nhân
         const response = await artistService.getAllArtists();
-
-        // Kiểm tra response structure từ API
-        console.log("API Response:", response);
-
-        if (response && response.isSuccess && response.data) {
-          console.log(
-            "Sử dụng dữ liệu từ API:",
-            response.data.length,
-            "nghệ nhân"
-          );
-          setArtists(response.data);
-          setFilteredArtists(response.data);
+        if (response && response.isSuccess && response.data.items) {
+          setArtists(response.data.items);
+          setFilteredArtists(response.data.items);
         } else {
           // Fallback về mảng rỗng nếu API không trả về đúng format
           console.warn("API response format không đúng");
@@ -80,7 +78,7 @@ export const ArtistLayout = () => {
 
   // Lọc nghệ nhân theo từ khóa tìm kiếm và filters
   useEffect(() => {
-    let filtered = artists;
+    let filtered = Array.isArray(artists) ? artists : [];
 
     // Filter by search term (chỉ tìm theo tên nghệ nhân)
     if (searchTerm.trim()) {
@@ -139,7 +137,41 @@ export const ArtistLayout = () => {
     }
 
     setFilteredArtists(filtered);
-  }, [searchTerm, filters, artists]);
+
+    // Tính toán tổng số trang
+    const totalPagesCount = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(totalPagesCount);
+
+    // Reset về trang đầu nếu trang hiện tại vượt quá tổng số trang
+    if (currentPage > totalPagesCount && totalPagesCount > 0) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm, filters, artists, itemsPerPage, currentPage]);
+
+  // Tính toán dữ liệu cho trang hiện tại
+  const getCurrentPageData = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredArtists.slice(startIndex, endIndex);
+  };
+
+  // Xử lý chuyển trang
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top khi chuyển trang
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Xử lý khi search hoặc filter thay đổi
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset về trang đầu
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters((prev) => ({ ...prev, [filterType]: value }));
+    setCurrentPage(1); // Reset về trang đầu
+  };
 
   if (loading) {
     return (
@@ -188,7 +220,7 @@ export const ArtistLayout = () => {
                   type="text"
                   placeholder="Tìm kiếm theo tên nghệ nhân..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full px-4 py-3 pl-12 pr-4 border border-artisan-brown-700 bg-artisan-brown-800 text-white placeholder-artisan-brown-300 rounded-lg search-input-focus"
                 />
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-artisan-gold-400">
@@ -207,7 +239,7 @@ export const ArtistLayout = () => {
                 <select
                   value={filters.specialty}
                   onChange={(e) =>
-                    setFilters({ ...filters, specialty: e.target.value })
+                    handleFilterChange("specialty", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-artisan-brown-700 bg-artisan-brown-800 text-white rounded-lg focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                 >
@@ -228,7 +260,7 @@ export const ArtistLayout = () => {
                 <select
                   value={filters.location}
                   onChange={(e) =>
-                    setFilters({ ...filters, location: e.target.value })
+                    handleFilterChange("location", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-artisan-brown-700 bg-artisan-brown-800 text-white rounded-lg focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                 >
@@ -249,7 +281,7 @@ export const ArtistLayout = () => {
                 <select
                   value={filters.experienceRange}
                   onChange={(e) =>
-                    setFilters({ ...filters, experienceRange: e.target.value })
+                    handleFilterChange("experienceRange", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-artisan-brown-700 bg-artisan-brown-800 text-white rounded-lg focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                 >
@@ -269,7 +301,7 @@ export const ArtistLayout = () => {
                 <select
                   value={filters.hasAchievements}
                   onChange={(e) =>
-                    setFilters({ ...filters, hasAchievements: e.target.value })
+                    handleFilterChange("hasAchievements", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-artisan-brown-700 bg-artisan-brown-800 text-white rounded-lg focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                 >
@@ -298,10 +330,10 @@ export const ArtistLayout = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-artisan-gold-400 mb-4 mt-8">
-              Danh Sách Nghệ Nhân
+              Danh Sách Cửa Hàng
             </h2>
             <p className="text-artisan-brown-200 text-lg">
-              Tìm thấy {filteredArtists.length} nghệ nhân
+              Tìm thấy {filteredArtists.length} cửa hàng
               {searchTerm && ` cho "${searchTerm}"`}
             </p>
 
@@ -337,7 +369,7 @@ export const ArtistLayout = () => {
             )}
           </div>
 
-          {filteredArtists.length === 0 ? (
+          {!Array.isArray(filteredArtists) || filteredArtists.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-artisan-gold-400 text-6xl mb-4">🔍</div>
               <h3 className="text-xl font-semibold text-white mb-2">
@@ -349,13 +381,74 @@ export const ArtistLayout = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredArtists.map((artist) => (
+              {getCurrentPageData().map((artist) => (
                 <ArtistCard key={artist.artistId} artist={artist} />
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <section className="py-8 bg-artisan-brown-900">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-center items-center space-x-2">
+              {/* Previous button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-2 rounded-lg transition-all duration-200 ${
+                  currentPage === 1
+                    ? "bg-artisan-brown-700 text-artisan-brown-500 cursor-not-allowed"
+                    : "bg-artisan-brown-600 text-white hover:bg-artisan-brown-500"
+                }`}
+              >
+                ← Trước
+              </button>
+
+              {/* Page numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                      currentPage === page
+                        ? "bg-artisan-gold-500 text-white font-bold"
+                        : "bg-artisan-brown-600 text-white hover:bg-artisan-brown-500"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              {/* Next button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-2 rounded-lg transition-all duration-200 ${
+                  currentPage === totalPages
+                    ? "bg-artisan-brown-700 text-artisan-brown-500 cursor-not-allowed"
+                    : "bg-artisan-brown-600 text-white hover:bg-artisan-brown-500"
+                }`}
+              >
+                Sau →
+              </button>
+            </div>
+
+            {/* Page info */}
+            <div className="text-center mt-4">
+              <p className="text-artisan-brown-300 text-sm">
+                Trang {currentPage} / {totalPages} • Hiển thị{" "}
+                {getCurrentPageData().length} trong {filteredArtists.length}{" "}
+                nghệ nhân
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

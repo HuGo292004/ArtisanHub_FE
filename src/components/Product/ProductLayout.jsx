@@ -26,15 +26,6 @@ export const ProductLayout = () => {
     totalPages: 0,
   });
 
-  // Lấy danh sách unique values cho filters
-  const getUniqueValues = (key) => {
-    const values = products
-      .map((product) => product[key])
-      .filter((value) => value && value !== null && value !== "")
-      .map((value) => (typeof value === "string" ? value.trim() : value));
-    return [...new Set(values)].sort();
-  };
-
   // Reset filters
   const resetFilters = () => {
     setFilters({
@@ -93,6 +84,7 @@ export const ProductLayout = () => {
 
   useEffect(() => {
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Lọc sản phẩm theo từ khóa tìm kiếm và filters
@@ -416,4 +408,3 @@ export const ProductLayout = () => {
     </div>
   );
 };
-
