@@ -16,6 +16,7 @@ import ContactPage from "@/components/Contact/ContactPage";
 import { ArtistLayout } from "./components/Artist/ArtistLayout";
 import { ArtistDetail } from "./components/Artist/ArtistDetail";
 import { ProductLayout } from "./components/Product/ProductLayout";
+import ProductDetail from "./components/Product/ProductDetail";
 // import CartPage from "@/components/Cart/CartPage";
 
 function MainLayout() {
@@ -49,6 +50,7 @@ function App() {
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/products" element={<ProductLayout />} />
+              <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/stores" element={<ArtistLayout />} />
               <Route path="/stores/:id" element={<ArtistDetail />} />
               <Route path="/about" element={<AboutPage />} />

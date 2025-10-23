@@ -2,6 +2,7 @@ import { Star, Heart, ShoppingCart, Eye } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
+import { Link } from "react-router-dom";
 
 export default function Products() {
   const { addToCart, loading: cartLoading } = useCart();
@@ -196,7 +197,7 @@ export default function Products() {
                 </div>
               </CardContent>
 
-              <CardFooter className="p-4 pt-0">
+              <CardFooter className="p-4 pt-0 space-y-2">
                 <Button
                   className="w-full"
                   onClick={async () => {
@@ -216,6 +217,14 @@ export default function Products() {
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
                 </Button>
+                <Link to={`/products/${product.id}`} className="block">
+                  <Button
+                    variant="outline"
+                    className="w-full border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white"
+                  >
+                    Xem chi tiết
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
           ))}
