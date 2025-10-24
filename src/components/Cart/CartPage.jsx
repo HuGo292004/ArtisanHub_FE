@@ -137,26 +137,36 @@ const CartPage = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => {
-                const product = item.product;
-                const price = product?.discountPrice || product?.price || 0;
+              {cartItems.map((item, index) => {
+                // API returns flat structure: productName, price, imageUrl directly on item
+                const productName =
+                  item.productName ||
+                  item.product?.name ||
+                  "Sản phẩm không tên";
+                const price =
+                  item.price ||
+                  item.product?.discountPrice ||
+                  item.product?.price ||
+                  0;
+                const imageUrl = item.imageUrl || item.product?.images;
+                const category = item.product?.category || "Chưa phân loại";
                 const totalPrice = price * item.quantity;
 
                 return (
                   <Card
-                    key={item.cartItemId || item.id}
+                    key={item.cartItemId || item.id || `cart-item-${index}`}
                     className="bg-artisan-brown-900 border-artisan-brown-700"
                   >
                     <CardContent className="p-6">
-                      <div className="flex gap-4">
+                      <div className="flex gap-6 items-start pt-5">
                         {/* Product Image */}
-                        <div className="w-24 h-24 flex-shrink-0">
+                        <div className="w-20 h-20 flex-shrink-0">
                           <img
                             src={
-                              product?.images ||
+                              imageUrl ||
                               "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"
                             }
-                            alt={product?.name}
+                            alt={productName}
                             className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
                               e.target.src =
@@ -165,21 +175,22 @@ const CartPage = () => {
                           />
                         </div>
 
-                        {/* Product Info */}
-                        <div className="flex-grow">
-                          <h3 className="text-lg font-semibold text-white mb-2">
-                            {product?.name || "Sản phẩm không tên"}
+                        {/* Product Info - Left aligned */}
+                        <div className="flex-grow min-w-0">
+                          <h3 className="text-lg font-semibold text-white mb-1 line-clamp-2">
+                            {productName}
                           </h3>
                           <p className="text-artisan-brown-300 text-sm mb-2">
-                            {product?.category || "Chưa phân loại"}
+                            {category}
                           </p>
                           <p className="text-artisan-gold-400 font-bold text-lg">
                             {formatPrice(price)}đ
                           </p>
                         </div>
 
-                        {/* Quantity Controls */}
-                        <div className="flex flex-col items-end gap-4">
+                        {/* Right Section - Controls and Total - Centered */}
+                        <div className="flex items-center gap-6 pt-8">
+                          {/* Quantity Controls */}
                           <div className="flex items-center gap-2">
                             <Button
                               size="sm"
@@ -212,19 +223,21 @@ const CartPage = () => {
                             </Button>
                           </div>
 
-                          <div className="text-right">
+                          {/* Total Price */}
+                          <div className="text-right min-w-[120px]">
                             <p className="text-artisan-gold-400 font-bold text-lg">
                               {formatPrice(totalPrice)}đ
                             </p>
                           </div>
 
+                          {/* Remove Button */}
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() =>
                               handleRemoveItem(item.cartItemId || item.id)
                             }
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -240,7 +253,7 @@ const CartPage = () => {
             <div className="lg:col-span-1">
               <Card className="bg-artisan-brown-900 border-artisan-brown-700 sticky top-24">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-white mb-6">
+                  <h2 className="text-xl font-bold text-white mb-6 gap-6 pt-6">
                     Tóm tắt đơn hàng
                   </h2>
 
