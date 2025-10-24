@@ -142,7 +142,7 @@ const ProductDetail = () => {
     );
   }
 
-  if (error || !product) {
+  if (error) {
     return (
       <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center">
         <div className="text-center">
