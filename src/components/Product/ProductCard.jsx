@@ -14,10 +14,15 @@ const ProductCard = ({ product }) => {
   const parseImages = (imagesString) => {
     try {
       if (!imagesString) return [];
+      // Nếu là string URL đơn lẻ, trả về array với 1 phần tử
+      if (typeof imagesString === "string" && !imagesString.startsWith("[")) {
+        return [imagesString];
+      }
       const parsed = JSON.parse(imagesString);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return [];
+      // Nếu parse JSON thất bại, coi như là string URL đơn lẻ
+      return [imagesString];
     }
   };
 
