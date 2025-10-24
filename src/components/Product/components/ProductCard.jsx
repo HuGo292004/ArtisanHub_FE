@@ -4,10 +4,15 @@ import { Star, Heart, ShoppingCart, Eye } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/components/ui/Toast";
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { addToCart, loading: cartLoading } = useCart();
+  const toast = useToast();
+
+  // Check if user is logged in
+  const isLoggedIn = Boolean(localStorage.getItem("access_token"));
   const {
     productId,
     name,
@@ -44,13 +49,13 @@ const ProductCard = ({ product }) => {
     try {
       const result = await addToCart(productId, 1);
       if (result.success) {
-        // Có thể thêm toast notification ở đây
-        console.log(result.message);
+        toast.success(result.message);
       } else {
-        console.error(result.message);
+        toast.error(result.message);
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast.error("Không thể thêm sản phẩm vào giỏ hàng");
     }
   };
 
@@ -157,21 +162,26 @@ const ProductCard = ({ product }) => {
 
         {/* Nút hành động - luôn ở dưới cùng */}
         <div className="flex gap-2 mt-4">
-          <Button
-            className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
-            size="sm"
-            onClick={handleAddToCart}
-            disabled={cartLoading}
-          >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
-          </Button>
+          {isLoggedIn && (
+            <Button
+              className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+              size="sm"
+              onClick={handleAddToCart}
+              disabled={cartLoading}
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+            </Button>
+          )}
           <Button
             variant="outline"
-            className="flex-1 border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50"
+            className={`${
+              isLoggedIn ? "flex-1" : "w-full"
+            } border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50`}
             size="sm"
             onClick={handleProductClick}
           >
+            <Eye className="w-4 h-4 mr-2" />
             Xem chi tiết
           </Button>
         </div>

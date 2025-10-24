@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingBag, User, Search } from "lucide-react";
+import { Menu, X, ShoppingBag, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 
@@ -48,6 +48,11 @@ export default function Header() {
     if (isProfileOpen) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [isProfileOpen]);
+
+  const handleCartClick = () => {
+    navigate("/cart");
+    setIsProfileOpen(false); // Close profile if open
+  };
 
   const handleLogout = () => {
     try {
@@ -110,22 +115,21 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Search className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => navigate("/cart")}
-            >
-              <ShoppingBag className="h-5 w-5" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemCount > 99 ? "99+" : cartItemCount}
-                </span>
-              )}
-            </Button>
+            {isLoggedIn && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={handleCartClick}
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount > 99 ? "99+" : cartItemCount}
+                  </span>
+                )}
+              </Button>
+            )}
             {isLoggedIn && (
               <div className="relative" ref={profileRef}>
                 <Button
@@ -158,13 +162,14 @@ export default function Header() {
             )}
             {/* Dark mode toggle removed */}
             {!isLoggedIn && (
-              <Button
-                className="ml-4"
-                variant="ghost"
-                onClick={() => navigate("/login")}
-              >
-                Đăng nhập
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => navigate("/login")}>
+                  Đăng nhập
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/register")}>
+                  Đăng ký
+                </Button>
+              </div>
             )}
           </div>
 
@@ -201,22 +206,26 @@ export default function Header() {
                 </a>
               ))}
               <div className="flex items-center space-x-4 pt-4 border-t border-artisan-gold-200">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative"
-                  onClick={() => {
-                    navigate("/cart");
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <ShoppingBag className="h-5 w-5" />
-                  {cartItemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartItemCount > 99 ? "99+" : cartItemCount}
-                    </span>
-                  )}
-                </Button>
+                {isLoggedIn && (
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative"
+                      onClick={() => {
+                        navigate("/cart");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <ShoppingBag className="h-5 w-5" />
+                      {cartItemCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          {cartItemCount > 99 ? "99+" : cartItemCount}
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
                 {isLoggedIn ? (
                   <Button
                     className="flex-1"
@@ -229,15 +238,28 @@ export default function Header() {
                     Hồ sơ
                   </Button>
                 ) : (
-                  <Button
-                    className="flex-1"
-                    onClick={() => {
-                      navigate("/login");
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Đăng nhập
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      className="flex-1"
+                      variant="ghost"
+                      onClick={() => {
+                        navigate("/login");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Đăng nhập
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onClick={() => {
+                        navigate("/register");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Đăng ký
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

@@ -31,10 +31,36 @@ export const CartProvider = ({ children }) => {
       setError(null);
       const response = await cartService.getCartItems();
 
+      // Since axiosClient interceptor returns response.data,
+      // response is already the data object
       if (response && response.isSuccess && response.data) {
-        setCartItems(response.data);
-        const totalCount = response.data.reduce(
-          (total, item) => total + item.quantity,
+        // Check if response.data has items property (nested structure)
+        if (response.data.items && Array.isArray(response.data.items)) {
+          const cartData = response.data.items;
+          setCartItems(cartData);
+          const totalCount = cartData.reduce(
+            (total, item) => total + (item.quantity || 0),
+            0
+          );
+          setCartItemCount(totalCount);
+        } else if (Array.isArray(response.data)) {
+          // Ensure response.data is an array
+          const cartData = response.data;
+          setCartItems(cartData);
+          const totalCount = cartData.reduce(
+            (total, item) => total + (item.quantity || 0),
+            0
+          );
+          setCartItemCount(totalCount);
+        } else {
+          setCartItems([]);
+          setCartItemCount(0);
+        }
+      } else if (Array.isArray(response)) {
+        // If response is directly an array (fallback case)
+        setCartItems(response);
+        const totalCount = response.reduce(
+          (total, item) => total + (item.quantity || 0),
           0
         );
         setCartItemCount(totalCount);
@@ -175,7 +201,9 @@ export const CartProvider = ({ children }) => {
   // Calculate total price
   const getTotalPrice = () => {
     return cartItems.reduce((total, item) => {
-      const price = item.product?.discountPrice || item.product?.price || 0;
+      // API returns flat structure: price directly on item
+      const price =
+        item.price || item.product?.discountPrice || item.product?.price || 0;
       return total + price * item.quantity;
     }, 0);
   };

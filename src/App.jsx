@@ -22,6 +22,7 @@ import EditProfilePage from "./components/Profile/components/EditProfilePage";
 import AddProductPage from "./components/Profile/components/AddProductPage";
 
 // import CartPage from "@/components/Cart/CartPage";
+import CartPage from "@/components/Cart/CartPage";
 
 function MainLayout() {
   return (
@@ -49,7 +50,12 @@ function App() {
   return (
     <ToastProvider>
       <CartProvider>
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Routes>
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
@@ -62,7 +68,7 @@ function App() {
               <Route path="/profile/add-product" element={<AddProductPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              {/* <Route path="/cart" element={<CartPage />} /> */}
+              <Route path="/cart" element={<CartPage />} />
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />
