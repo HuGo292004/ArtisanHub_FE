@@ -23,3 +23,23 @@ export function register(payload) {
 export function getProfile() {
   return axiosClient.get("/api/v1/Account/me");
 }
+
+export function updateProfile(accountId, formData) {
+  return axiosClient.put(`/api/v1/Account/${accountId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
+
+export function getArtistProfile() {
+  return axiosClient.get("/api/artist-profiles/me");
+}
+
+export function createProduct(formData) {
+  return axiosClient.post("/api/my-products", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
