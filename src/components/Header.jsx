@@ -49,6 +49,11 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [isProfileOpen]);
 
+  const handleCartClick = () => {
+    navigate("/cart");
+    setIsProfileOpen(false); // Close profile if open
+  };
+
   const handleLogout = () => {
     try {
       localStorage.removeItem("access_token");
@@ -117,7 +122,7 @@ export default function Header() {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => navigate("/cart")}
+              onClick={handleCartClick}
             >
               <ShoppingBag className="h-5 w-5" />
               {cartItemCount > 0 && (
@@ -201,22 +206,24 @@ export default function Header() {
                 </a>
               ))}
               <div className="flex items-center space-x-4 pt-4 border-t border-artisan-gold-200">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative"
-                  onClick={() => {
-                    navigate("/cart");
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <ShoppingBag className="h-5 w-5" />
-                  {cartItemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {cartItemCount > 99 ? "99+" : cartItemCount}
-                    </span>
-                  )}
-                </Button>
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    onClick={() => {
+                      navigate("/cart");
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <ShoppingBag className="h-5 w-5" />
+                    {cartItemCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {cartItemCount > 99 ? "99+" : cartItemCount}
+                      </span>
+                    )}
+                  </Button>
+                </div>
                 {isLoggedIn ? (
                   <Button
                     className="flex-1"

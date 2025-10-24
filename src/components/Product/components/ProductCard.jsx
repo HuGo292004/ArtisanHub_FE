@@ -4,10 +4,12 @@ import { Star, Heart, ShoppingCart, Eye } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/components/ui/Toast";
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { addToCart, loading: cartLoading } = useCart();
+  const toast = useToast();
   const {
     productId,
     name,
@@ -44,13 +46,13 @@ const ProductCard = ({ product }) => {
     try {
       const result = await addToCart(productId, 1);
       if (result.success) {
-        // Có thể thêm toast notification ở đây
-        console.log(result.message);
+        toast.success(result.message);
       } else {
-        console.error(result.message);
+        toast.error(result.message);
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast.error("Không thể thêm sản phẩm vào giỏ hàng");
     }
   };
 
