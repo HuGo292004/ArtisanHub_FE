@@ -433,10 +433,9 @@ export const ArtistDetail = () => {
                 <ProductCard
                   key={product.productId}
                   product={product}
-                  onViewDetail={(product) => {
-                    // Có thể thêm logic xem chi tiết sản phẩm ở đây
-                    console.log("Xem chi tiết sản phẩm:", product);
-                  }}
+                  onViewDetail={() =>
+                    navigate(`/products/${product.productId}`)
+                  }
                 />
               ))}
             </div>
