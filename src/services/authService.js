@@ -17,7 +17,11 @@ export function login(payload) {
 }
 
 export function register(payload) {
-  return axiosClient.post("/api/v1/Account", payload);
+  return axiosClient.post("/api/v1/Account", payload, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 }
 
 export function getProfile() {
