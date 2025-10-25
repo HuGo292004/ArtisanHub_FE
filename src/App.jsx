@@ -4,7 +4,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
-import Products from "@/components/Products";
+// Products component removed - using ProductLayout instead
 import Artisans from "@/components/Artisans";
 import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
@@ -39,7 +39,6 @@ function HomePage() {
     <main>
       <Hero />
       <Features />
-      <Products />
       <Artisans />
       <Testimonials />
     </main>

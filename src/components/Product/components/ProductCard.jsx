@@ -29,6 +29,22 @@ const ProductCard = ({ product }) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
+  // Parse images from string
+  const parseImages = (imagesString) => {
+    try {
+      if (!imagesString) return [];
+      // If it's a single URL string, return an array with 1 element
+      if (typeof imagesString === "string" && !imagesString.startsWith("[")) {
+        return [imagesString];
+      }
+      const parsed = JSON.parse(imagesString);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      // If JSON parsing fails, treat it as a single URL string
+      return [imagesString];
+    }
+  };
+
   // Tính phần trăm giảm giá
   const calculateDiscount = (price, discountPrice) => {
     if (price && discountPrice && price > discountPrice) {
@@ -47,7 +63,16 @@ const ProductCard = ({ product }) => {
   const handleAddToCart = async (e) => {
     e.stopPropagation();
     try {
-      const result = await addToCart(productId, 1);
+      // Prepare product data for cart
+      const productData = {
+        productName: name,
+        price: discountPrice || price,
+        imageUrl: parseImages(images)[0], // First image
+        category: category?.name || "Chưa phân loại",
+        product: product, // Include full product data
+      };
+
+      const result = await addToCart(productId, 1, productData);
       if (result.success) {
         toast.success(result.message);
       } else {

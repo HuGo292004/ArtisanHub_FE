@@ -31,23 +31,23 @@ const CartPage = () => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
-  const handleQuantityChange = async (cartItemId, newQuantity) => {
+  const handleQuantityChange = (cartItemId, newQuantity) => {
     if (newQuantity < 1) {
-      await removeFromCart(cartItemId);
+      removeFromCart(cartItemId);
     } else {
-      await updateCartItem(cartItemId, newQuantity);
+      updateCartItem(cartItemId, newQuantity);
     }
   };
 
-  const handleRemoveItem = async (cartItemId) => {
-    await removeFromCart(cartItemId);
+  const handleRemoveItem = (cartItemId) => {
+    removeFromCart(cartItemId);
   };
 
-  const handleClearCart = async () => {
+  const handleClearCart = () => {
     if (
       window.confirm("Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?")
     ) {
-      await clearCart();
+      clearCart();
     }
   };
 
@@ -197,7 +197,7 @@ const CartPage = () => {
                               variant="outline"
                               onClick={() =>
                                 handleQuantityChange(
-                                  item.cartItemId || item.id,
+                                  item.cartItemId || item.id || item.productId,
                                   item.quantity - 1
                                 )
                               }
@@ -213,7 +213,7 @@ const CartPage = () => {
                               variant="outline"
                               onClick={() =>
                                 handleQuantityChange(
-                                  item.cartItemId || item.id,
+                                  item.cartItemId || item.id || item.productId,
                                   item.quantity + 1
                                 )
                               }
@@ -235,7 +235,9 @@ const CartPage = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() =>
-                              handleRemoveItem(item.cartItemId || item.id)
+                              handleRemoveItem(
+                                item.cartItemId || item.id || item.productId
+                              )
                             }
                             className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2"
                           >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -72,7 +72,7 @@ const ProductDetail = () => {
   };
 
   // Fetch product details
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -105,17 +105,28 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       fetchProduct();
     }
-  }, [id]);
+  }, [id, fetchProduct]);
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     try {
-      const result = await addToCart(product.productId, quantity);
+      console.log("🔍 Product data:", product);
+      // Prepare product data for cart
+      const productData = {
+        productName: product.name,
+        price: product.discountPrice || product.price,
+        imageUrl: parseImages(product.images)[0], // First image
+        category: product.category?.name || "Chưa phân loại",
+        product: product, // Include full product data
+      };
+      console.log("📦 Prepared productData:", productData);
+
+      const result = addToCart(product.productId, quantity, productData);
       if (result.success) {
         console.log(result.message);
         // You can add a toast notification here

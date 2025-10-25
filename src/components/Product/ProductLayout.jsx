@@ -50,11 +50,6 @@ export const ProductLayout = () => {
       });
 
       if (response && response.isSuccess && response.data) {
-        console.log(
-          "Sử dụng dữ liệu từ API:",
-          response.data.items?.length || 0,
-          "sản phẩm"
-        );
         setProducts(response.data.items || []);
         setFilteredProducts(response.data.items || []);
         setPagination({
