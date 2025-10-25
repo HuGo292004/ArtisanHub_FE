@@ -8,14 +8,13 @@ export default function RegisterForm() {
   const [form, setForm] = useState({
     username: "",
     password: "",
-    role: "Artist",
     email: "",
     phone: "",
     address: "",
-    avatar: "",
     gender: "Other",
     dob: "",
   });
+  const [avatarFile, setAvatarFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -31,10 +30,7 @@ export default function RegisterForm() {
   const onAvatarFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () =>
-      setForm((p) => ({ ...p, avatar: String(reader.result) }));
-    reader.readAsDataURL(file);
+    setAvatarFile(file);
   };
 
   return (
@@ -71,18 +67,26 @@ export default function RegisterForm() {
               nextErrors.username = "Không được để trống";
             if (!form.password?.trim())
               nextErrors.password = "Không được để trống";
-            if (!form.phone?.trim()) nextErrors.phone = "Không được để trống";
-            if (!form.address?.trim())
-              nextErrors.address = "Không được để trống";
-            if (!form.dob?.trim()) nextErrors.dob = "Không được để trống";
-            if (!form.role?.trim()) nextErrors.role = "Không được để trống";
+            if (!form.email?.trim()) nextErrors.email = "Không được để trống";
             if (Object.keys(nextErrors).length > 0) {
               setErrors(nextErrors);
               setIsSubmitting(false);
               return;
             }
             try {
-              const res = await registerApi({ ...form });
+              // Create FormData for multipart/form-data
+              const formData = new FormData();
+              formData.append("Username", form.username);
+              formData.append("Password", form.password);
+              formData.append("Email", form.email);
+              if (form.phone?.trim()) formData.append("Phone", form.phone);
+              if (form.address?.trim())
+                formData.append("Address", form.address);
+              if (form.gender?.trim()) formData.append("Gender", form.gender);
+              if (form.dob?.trim()) formData.append("Dob", form.dob);
+              if (avatarFile) formData.append("AvatarFile", avatarFile);
+
+              const res = await registerApi(formData);
               if (res?.isSuccess) {
                 setSuccessMsg("Đăng ký thành công. Vui lòng đăng nhập.");
                 toast.success("Đăng ký thành công.");
@@ -142,10 +146,7 @@ export default function RegisterForm() {
               className="block text-sm font-semibold tracking-wide text-white/95"
               htmlFor="email"
             >
-              Email{" "}
-              <span className="text-white/70 text-xs align-middle">
-                (không bắt buộc)
-              </span>
+              Email <span className="text-red-400">*</span>
             </label>
             <input
               id="email"
@@ -156,13 +157,19 @@ export default function RegisterForm() {
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="user@example.com"
             />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-300">{errors.email}</p>
+            )}
           </div>
           <div>
             <label
               className="block text-sm font-semibold tracking-wide text-white/95"
               htmlFor="phone"
             >
-              Số điện thoại <span className="text-red-400">*</span>
+              Số điện thoại{" "}
+              <span className="text-white/70 text-xs align-middle">
+                (không bắt buộc)
+              </span>
             </label>
             <input
               id="phone"
@@ -172,16 +179,16 @@ export default function RegisterForm() {
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="0901234567"
             />
-            {errors.phone && (
-              <p className="mt-1 text-xs text-red-300">{errors.phone}</p>
-            )}
           </div>
           <div className="md:col-span-2">
             <label
               className="block text-sm font-semibold tracking-wide text-white/95"
               htmlFor="address"
             >
-              Địa chỉ <span className="text-red-400">*</span>
+              Địa chỉ{" "}
+              <span className="text-white/70 text-xs align-middle">
+                (không bắt buộc)
+              </span>
             </label>
             <input
               id="address"
@@ -191,9 +198,6 @@ export default function RegisterForm() {
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
             />
-            {errors.address && (
-              <p className="mt-1 text-xs text-red-300">{errors.address}</p>
-            )}
           </div>
           <div>
             <label
@@ -213,10 +217,10 @@ export default function RegisterForm() {
               onChange={onAvatarFileChange}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 file:mr-4 file:rounded-lg file:border-0 file:bg-white/80 file:text-artisan-brown-900 file:px-4 file:py-2 text-white outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
             />
-            {form.avatar && (
+            {avatarFile && (
               <div className="mt-2">
                 <img
-                  src={form.avatar}
+                  src={URL.createObjectURL(avatarFile)}
                   alt="avatar preview"
                   className="h-16 w-16 rounded-full object-cover border border-white/20"
                 />
@@ -228,7 +232,10 @@ export default function RegisterForm() {
               className="block text-sm font-semibold tracking-wide text-white/95"
               htmlFor="dob"
             >
-              Ngày sinh <span className="text-red-400">*</span>
+              Ngày sinh{" "}
+              <span className="text-white/70 text-xs align-middle">
+                (không bắt buộc)
+              </span>
             </label>
             <input
               id="dob"
@@ -238,9 +245,6 @@ export default function RegisterForm() {
               onChange={onChange}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
             />
-            {errors.dob && (
-              <p className="mt-1 text-xs text-red-300">{errors.dob}</p>
-            )}
           </div>
           <div>
             <label
@@ -269,31 +273,6 @@ export default function RegisterForm() {
                 Khác
               </option>
             </select>
-          </div>
-          <div>
-            <label
-              className="block text-sm font-semibold tracking-wide text-white/95"
-              htmlFor="role"
-            >
-              Vai trò <span className="text-red-400">*</span>
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={form.role}
-              onChange={onChange}
-              className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
-            >
-              <option className="bg-artisan-brown-900" value="Artist">
-                Artist
-              </option>
-              <option className="bg-artisan-brown-900" value="Customer">
-                Customer
-              </option>
-            </select>
-            {errors.role && (
-              <p className="mt-1 text-xs text-red-300">{errors.role}</p>
-            )}
           </div>
 
           {/* Thông báo đã chuyển lên góc trên bên phải */}
