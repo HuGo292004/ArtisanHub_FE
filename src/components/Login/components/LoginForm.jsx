@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login } from "@/services/authService";
+import { login, getProfile } from "@/services/authService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/Toast";
 
@@ -42,11 +42,42 @@ export default function LoginForm() {
             try {
               const res = await login({ email, password });
               const token = res?.data?.token;
+
               if (token) {
                 localStorage.setItem("access_token", token);
+
+                // Lấy thông tin user để xác định role
+                let userRole = "customer";
+
+                try {
+                  const profileRes = await getProfile();
+                  userRole = profileRes?.data?.role || "customer";
+                  console.log("Profile API success, role:", userRole);
+                } catch (profileError) {
+                  console.log(
+                    "Profile API failed, using login response:",
+                    profileError
+                  );
+                  // Fallback: lấy role từ login response
+                  userRole = res?.data?.role || "customer";
+                  console.log("Using login response role:", userRole);
+                }
+
+                // Normalize role to lowercase for consistent checking
+                userRole = userRole?.toLowerCase() || "customer";
+                console.log("Normalized role:", userRole);
+
+                localStorage.setItem("user_role", userRole);
                 setSuccessMsg("Đăng nhập thành công.");
                 toast.success("Đăng nhập thành công.");
-                setTimeout(() => navigate("/", { replace: true }), 800);
+
+                // Chuyển hướng dựa trên role
+                const redirectPath = userRole === "admin" ? "/admin" : "/";
+                console.log("Redirecting to:", redirectPath, "Role:", userRole);
+                setTimeout(
+                  () => navigate(redirectPath, { replace: true }),
+                  800
+                );
               } else {
                 throw new Error("Token không hợp lệ");
               }

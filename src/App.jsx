@@ -21,6 +21,14 @@ import ProfilePage from "./components/Profile/ProfilePage";
 import EditProfilePage from "./components/Profile/components/EditProfilePage";
 import AddProductPage from "./components/Profile/components/AddProductPage";
 
+// Admin components
+import AdminLayout from "./components/Admin/AdminLayout";
+import AdminDashboard from "./components/Admin/AdminDashboard";
+import UserManagement from "./components/Admin/UserManagement";
+import ProductManagement from "./components/Admin/ProductManagement";
+import OrderManagement from "./components/Admin/OrderManagement";
+import ArtistManagement from "./components/Admin/ArtistManagement";
+
 // import CartPage from "@/components/Cart/CartPage";
 import CartPage from "@/components/Cart/CartPage";
 
@@ -71,6 +79,16 @@ function App() {
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="accounts" element={<UserManagement />} />
+              <Route path="products" element={<ProductManagement />} />
+              <Route path="orders" element={<OrderManagement />} />
+              <Route path="artists" element={<ArtistManagement />} />
+            </Route>
           </Routes>
         </BrowserRouter>
       </CartProvider>
