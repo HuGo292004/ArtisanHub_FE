@@ -10,6 +10,7 @@ export default function Header() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [userRole, setUserRole] = useState("");
   const profileRef = useRef(null);
   const { cartItemCount } = useCart();
 
@@ -25,15 +26,18 @@ export default function Header() {
     const checkAuth = () => {
       try {
         const token = localStorage.getItem("access_token");
+        const role = localStorage.getItem("user_role");
         setIsLoggedIn(Boolean(token));
+        setUserRole(role || "");
         if (!token) setIsProfileOpen(false);
       } catch {
         setIsLoggedIn(false);
+        setUserRole("");
       }
     };
     checkAuth();
     const onStorage = (e) => {
-      if (e.key === "access_token") checkAuth();
+      if (e.key === "access_token" || e.key === "user_role") checkAuth();
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -58,10 +62,12 @@ export default function Header() {
     try {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_role");
     } catch {
       // ignore storage errors
     }
     setIsLoggedIn(false);
+    setUserRole("");
     setIsProfileOpen(false);
     navigate("/", { replace: true });
   };
@@ -150,6 +156,17 @@ export default function Header() {
                     >
                       Thông tin cá nhân
                     </button>
+                    {userRole === "admin" && (
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-artisan-brown-800 hover:bg-artisan-brown-50"
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          navigate("/admin");
+                        }}
+                      >
+                        Quản trị viên
+                      </button>
+                    )}
                     <button
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       onClick={handleLogout}
