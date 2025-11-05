@@ -8,10 +8,10 @@ import {
   Minus,
   Trash2,
   ArrowLeft,
-  CreditCard,
   Package,
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import PaymentButton from "@/components/Payment/PaymentButton";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -51,10 +51,7 @@ const CartPage = () => {
     }
   };
 
-  const handleCheckout = () => {
-    // TODO: Implement checkout functionality
-    navigate("/checkout");
-  };
+  // Checkout được tách sang PaymentButton
 
   if (loading) {
     return (
@@ -272,13 +269,9 @@ const CartPage = () => {
                     </div>
                   </div>
 
-                  <Button
-                    onClick={handleCheckout}
-                    className="w-full bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white py-3 mb-4"
-                  >
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    Thanh toán
-                  </Button>
+                  <div className="mb-4">
+                    <PaymentButton cartItems={cartItems} />
+                  </div>
 
                   <Button
                     variant="outline"
