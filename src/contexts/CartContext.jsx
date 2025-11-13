@@ -105,17 +105,17 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // Update item quantity - GỌI API VÀ RELOAD TỪ BACKEND
-  const updateCartItem = async (productId, quantity) => {
+  // Update item quantity - GỌI API PUT /api/Carts/{cartItemId}/quantity
+  const updateCartItem = async (cartItemId, quantity) => {
     try {
       setError(null);
 
       if (quantity <= 0) {
-        return await removeFromCart(productId);
+        return await removeFromCart(cartItemId);
       }
 
-      // Gọi API update (DELETE + POST)
-      const response = await cartService.updateCartItem(productId, quantity);
+      // Gọi API PUT /api/Carts/{cartItemId}/quantity
+      const response = await cartService.updateCartItem(cartItemId, quantity);
 
       if (response && response.isSuccess) {
         // Reload từ backend
