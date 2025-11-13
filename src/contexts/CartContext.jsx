@@ -19,27 +19,11 @@ export const CartProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load cart items from localStorage on mount, fallback to API
+  // Load cart items from API on mount - LUÔN LOAD TỪ BACKEND
   useEffect(() => {
-    const savedCart = localStorage.getItem("artisan_cart");
-    if (savedCart) {
-      try {
-        const cartData = JSON.parse(savedCart);
-        setCartItems(cartData);
-        const totalCount = cartData.reduce(
-          (total, item) => total + (item.quantity || 0),
-          0
-        );
-        setCartItemCount(totalCount);
-      } catch (error) {
-        console.error("Error loading cart from localStorage:", error);
-        // Clear corrupted data and load from API
-        localStorage.removeItem("artisan_cart");
-        loadCartItems();
-      }
-    } else {
-      loadCartItems();
-    }
+    // LUÔN load từ backend để đảm bảo đồng bộ
+    loadCartItems();
+    // Không dùng localStorage nữa vì nó gây mất đồng bộ
   }, []);
 
   // Load cart items from API
@@ -96,148 +80,106 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // Add item to cart (LOCAL STATE ONLY - NO API CALL)
-  const addToCart = (productId, quantity = 1, productData = null) => {
-    setCartItems((prevItems) => {
-      // Check if product already exists in cart
-      const existingItem = prevItems.find(
-        (item) =>
-          String(item.productId || item.product?.productId) ===
-          String(productId)
-      );
+  // Add item to cart - GỌI API VÀ RELOAD TỪ BACKEND
+  const addToCart = async (productId, quantity = 1) => {
+    try {
+      setError(null);
 
-      let newItems;
-      if (existingItem) {
-        // If product exists, increase quantity ONLY for the matching item
-        newItems = prevItems.map((item) => {
-          if (
-            String(item.productId || item.product?.productId) ===
-            String(productId)
-          ) {
-            return {
-              ...item,
-              quantity: item.quantity + quantity,
-            };
-          }
-          return item; // Return unchanged item
-        });
+      // Gọi API add to cart
+      const response = await cartService.addToCart(productId, quantity);
+
+      if (response && response.isSuccess) {
+        // Reload từ backend để lấy data mới
+        await loadCartItems();
+        return { success: true, message: "Đã thêm sản phẩm vào giỏ hàng" };
       } else {
-        // If product doesn't exist, add new item
-        const newItem = {
-          // Add cart-specific fields first
-          cartItemId: `temp-${Date.now()}`, // Temporary ID for local state
-          productId: productId,
-          quantity: quantity,
-          // Then spread product data (this will override any conflicts)
-          ...(productData || {}), // Include any product data passed, fallback to empty object
-          // Fallback values if productData is null/undefined
-          productName: productData?.productName || "Sản phẩm không tên",
-          price: productData?.price || 0,
-          imageUrl:
-            productData?.imageUrl ||
-            "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop",
-          category: productData?.category || "Chưa phân loại",
-        };
-        newItems = [...prevItems, newItem];
+        throw new Error(response?.message || "Không thể thêm vào giỏ hàng");
+      }
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+      setError(err.message || "Không thể thêm vào giỏ hàng");
+      return {
+        success: false,
+        message: err.message || "Không thể thêm vào giỏ hàng",
+      };
+    }
+  };
+
+  // Update item quantity - GỌI API VÀ RELOAD TỪ BACKEND
+  const updateCartItem = async (productId, quantity) => {
+    try {
+      setError(null);
+
+      if (quantity <= 0) {
+        return await removeFromCart(productId);
       }
 
-      // Save to localStorage
-      localStorage.setItem("artisan_cart", JSON.stringify(newItems));
+      // Gọi API update (DELETE + POST)
+      const response = await cartService.updateCartItem(productId, quantity);
 
-      const newCount = newItems.reduce(
-        (total, item) => total + (item.quantity || 0),
-        0
-      );
-      setCartItemCount(newCount);
-      return newItems;
-    });
-
-    return { success: true, message: "Đã thêm sản phẩm vào giỏ hàng" };
-  };
-
-  // Update item quantity in cart (LOCAL STATE ONLY - NO API CALL)
-  const updateCartItem = (cartItemId, quantity) => {
-    if (quantity <= 0) {
-      // Remove item from local state when quantity reaches 0
-      setCartItems((prevItems) => {
-        const newItems = prevItems.filter(
-          (item) =>
-            (item.cartItemId || item.id || item.productId) !== cartItemId
-        );
-        // Save to localStorage
-        localStorage.setItem("artisan_cart", JSON.stringify(newItems));
-
-        const newCount = newItems.reduce(
-          (total, item) => total + (item.quantity || 0),
-          0
-        );
-        setCartItemCount(newCount);
-        return newItems;
-      });
-      return { success: true, message: "Đã xóa sản phẩm khỏi giỏ hàng" };
+      if (response && response.isSuccess) {
+        // Reload từ backend
+        await loadCartItems();
+        return { success: true, message: "Đã cập nhật số lượng sản phẩm" };
+      } else {
+        throw new Error(response?.message || "Không thể cập nhật");
+      }
+    } catch (err) {
+      console.error("Error updating cart:", err);
+      await loadCartItems(); // Reload anyway
+      setError(err.message || "Không thể cập nhật");
+      return { success: false, message: err.message || "Không thể cập nhật" };
     }
+  };
 
-    // Update quantity in local state
-    setCartItems((prevItems) => {
-      const newItems = prevItems.map((item) => {
-        // Try to find the item by cartItemId first, then by productId as fallback
-        const itemCartId = String(item.cartItemId || item.id || "");
-        const itemProductId = String(item.productId || "");
-        const targetId = String(cartItemId);
+  // Remove item - GỌI API VÀ RELOAD TỪ BACKEND
+  const removeFromCart = async (cartItemId) => {
+    try {
+      setError(null);
 
-        // Check if this is the item we want to update
-        const isMatch = itemCartId === targetId || itemProductId === targetId;
+      // Gọi API xóa
+      const response = await cartService.removeFromCart(cartItemId);
 
-        if (isMatch) {
-          return { ...item, quantity };
+      if (response && response.isSuccess) {
+        // Reload từ backend
+        await loadCartItems();
+        return { success: true, message: "Đã xóa sản phẩm khỏi giỏ hàng" };
+      } else {
+        throw new Error(response?.message || "Không thể xóa");
+      }
+    } catch (err) {
+      console.error("Error removing:", err);
+      await loadCartItems(); // Reload anyway
+      setError(err.message || "Không thể xóa");
+      return { success: false, message: err.message || "Không thể xóa" };
+    }
+  };
+
+  // Clear cart - GỌI API VÀ RELOAD TỪ BACKEND
+  const clearCart = async () => {
+    try {
+      setError(null);
+
+      // Thử gọi API clear
+      try {
+        const response = await cartService.clearCart();
+        if (response && response.isSuccess) {
+          await loadCartItems();
+          return { success: true, message: "Đã xóa tất cả" };
         }
-        return item;
-      });
-
-      // Save to localStorage
-      localStorage.setItem("artisan_cart", JSON.stringify(newItems));
-
-      const newCount = newItems.reduce(
-        (total, item) => total + (item.quantity || 0),
-        0
-      );
-      setCartItemCount(newCount);
-      return newItems;
-    });
-
-    return { success: true, message: "Đã cập nhật số lượng sản phẩm" };
-  };
-
-  // Remove item from cart (LOCAL STATE ONLY - NO API CALL)
-  const removeFromCart = (cartItemId) => {
-    setCartItems((prevItems) => {
-      const newItems = prevItems.filter(
-        (item) => (item.cartItemId || item.id || item.productId) !== cartItemId
-      );
-      // Save to localStorage
-      localStorage.setItem("artisan_cart", JSON.stringify(newItems));
-
-      const newCount = newItems.reduce(
-        (total, item) => total + (item.quantity || 0),
-        0
-      );
-      setCartItemCount(newCount);
-      return newItems;
-    });
-
-    return { success: true, message: "Đã xóa sản phẩm khỏi giỏ hàng" };
-  };
-
-  // Clear entire cart (LOCAL STATE ONLY - NO API CALL)
-  const clearCart = () => {
-    setCartItems([]);
-    setCartItemCount(0);
-    // Clear localStorage
-    localStorage.removeItem("artisan_cart");
-    return {
-      success: true,
-      message: "Đã xóa tất cả sản phẩm khỏi giỏ hàng",
-    };
+      } catch {
+        // Fallback: xóa local
+        setCartItems([]);
+        setCartItemCount(0);
+        return { success: true, message: "Đã xóa tất cả" };
+      }
+    } catch (err) {
+      console.error("Error clearing cart:", err);
+      setCartItems([]);
+      setCartItemCount(0);
+      setError(err.message || "Không thể xóa giỏ hàng");
+      return { success: false, message: err.message || "Lỗi" };
+    }
   };
 
   // Calculate total price
