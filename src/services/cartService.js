@@ -29,11 +29,15 @@ export const cartService = {
   },
 
   // Cập nhật số lượng sản phẩm trong giỏ hàng
+  // Sử dụng PUT /api/Carts/{cartItemId}/quantity
   updateCartItem: async (cartItemId, quantity) => {
     try {
-      const response = await axiosClient.put(`/api/Carts/${cartItemId}`, {
-        quantity: quantity,
-      });
+      const response = await axiosClient.put(
+        `/api/Carts/${cartItemId}/quantity`,
+        {
+          quantity: quantity,
+        }
+      );
       return response;
     } catch (error) {
       console.error(

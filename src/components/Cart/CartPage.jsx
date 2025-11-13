@@ -31,23 +31,45 @@ const CartPage = () => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
-  const handleQuantityChange = (cartItemId, newQuantity) => {
+  const handleQuantityChange = async (cartItemId, newQuantity) => {
     if (newQuantity < 1) {
-      removeFromCart(cartItemId);
+      // Xóa sản phẩm khi quantity < 1
+      const result = await removeFromCart(cartItemId);
+      if (result?.success) {
+        toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
+      } else {
+        toast.error(result?.message || "Không thể xóa sản phẩm");
+      }
     } else {
-      updateCartItem(cartItemId, newQuantity);
+      // Cập nhật số lượng (PUT /api/Carts/{cartItemId}/quantity)
+      const result = await updateCartItem(cartItemId, newQuantity);
+      if (result?.success) {
+        toast.success("Đã cập nhật số lượng");
+      } else {
+        toast.error(result?.message || "Không thể cập nhật số lượng");
+      }
     }
   };
 
-  const handleRemoveItem = (cartItemId) => {
-    removeFromCart(cartItemId);
+  const handleRemoveItem = async (cartItemId) => {
+    const result = await removeFromCart(cartItemId);
+    if (result?.success) {
+      toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
+    } else {
+      toast.error(result?.message || "Không thể xóa sản phẩm");
+    }
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     if (
       window.confirm("Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?")
     ) {
-      clearCart();
+      const result = await clearCart();
+      if (result?.success) {
+        toast.success("Đã xóa tất cả sản phẩm khỏi giỏ hàng");
+      } else {
+        toast.error(result?.message || "Không thể xóa giỏ hàng");
+      }
     }
   };
 
