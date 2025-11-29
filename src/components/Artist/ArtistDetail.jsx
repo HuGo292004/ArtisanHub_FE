@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/Product/ProductCard";
-import { artistService } from "@/services/artistService";
+import { getArtistDetail } from "@/services/artistService";
 
 export const ArtistDetail = () => {
   const { id } = useParams();
@@ -17,7 +17,7 @@ export const ArtistDetail = () => {
     const fetchArtistDetail = async () => {
       try {
         setLoading(true);
-        const response = await artistService.getArtistDetail(id);
+        const response = await getArtistDetail(id);
 
         if (response && response.isSuccess && response.data) {
           setArtistData(response.data.artistProfile);
