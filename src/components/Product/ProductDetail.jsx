@@ -1,0 +1,430 @@
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Star,
+  Heart,
+  ShoppingCart,
+  Share2,
+  Minus,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { productService } from "@/services/productService";
+import { useCart } from "@/contexts/CartContext";
+
+const ProductDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToCart, loading: cartLoading } = useCart();
+
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+
+  // Parse images from string
+  const parseImages = (imagesString) => {
+    try {
+      if (!imagesString) {
+        console.log("No images string provided");
+        return [];
+      }
+
+      console.log("Raw images string:", imagesString);
+
+      // Nếu đã là array
+      if (Array.isArray(imagesString)) {
+        return imagesString;
+      }
+
+      // Nếu là string, thử parse JSON
+      if (typeof imagesString === "string") {
+        const parsed = JSON.parse(imagesString);
+        return Array.isArray(parsed) ? parsed : [imagesString];
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error parsing images:", error);
+      // Nếu parse JSON thất bại, thử coi như là URL đơn lẻ
+      if (typeof imagesString === "string" && imagesString.trim()) {
+        return [imagesString.trim()];
+      }
+      return [];
+    }
+  };
+
+  // Format price
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
+  };
+
+  // Calculate discount percentage
+  const calculateDiscountPercentage = (originalPrice, discountPrice) => {
+    if (!discountPrice || discountPrice >= originalPrice) return 0;
+    return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
+  };
+
+  // Fetch product details
+  const fetchProduct = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log("Fetching product with ID:", id);
+      // Thử endpoint khác nếu getProductForCustomer không hoạt động
+      let response;
+      try {
+        response = await productService.getProductForCustomer(id);
+        console.log("getProductForCustomer Response:", response);
+      } catch (customerError) {
+        console.warn(
+          "getProductForCustomer failed, trying getProductById:",
+          customerError
+        );
+        response = await productService.getProductById(id);
+        console.log("getProductById Response:", response);
+      }
+
+      if (response && response.isSuccess && response.data) {
+        console.log("Product data:", response.data);
+        setProduct(response.data);
+      } else {
+        console.warn("API response format không đúng:", response);
+        setError("Không tìm thấy sản phẩm");
+      }
+    } catch (err) {
+      console.error("Error fetching product:", err);
+      setError("Không thể tải thông tin sản phẩm");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchProduct();
+    }
+  }, [id, fetchProduct]);
+
+  const handleAddToCart = () => {
+    try {
+      console.log("🔍 Product data:", product);
+      // Prepare product data for cart
+      const productData = {
+        productName: product.name,
+        price: product.discountPrice || product.price,
+        imageUrl: parseImages(product.images)[0], // First image
+        category: product.category?.name || "Chưa phân loại",
+        product: product, // Include full product data
+      };
+      console.log("📦 Prepared productData:", productData);
+
+      const result = addToCart(product.productId, quantity, productData);
+      if (result.success) {
+        console.log(result.message);
+        // You can add a toast notification here
+      } else {
+        console.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
+  const handleQuantityChange = (change) => {
+    const newQuantity = quantity + change;
+    if (newQuantity >= 1) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-artisan-gold-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-lg mb-4">
+            ⚠️ {error || "Không tìm thấy sản phẩm"}
+          </div>
+          <div className="text-artisan-brown-300 mb-4">ID sản phẩm: {id}</div>
+          <Button onClick={() => navigate("/products")} variant="outline">
+            Quay lại danh sách
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const images = parseImages(product.images);
+  console.log("Raw product.images:", product.images);
+  console.log("Parsed images:", images);
+
+  // Fallback images nếu không có ảnh từ API
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=400&fit=crop",
+  ];
+
+  const finalImages = images.length > 0 ? images : fallbackImages;
+  const mainImage = finalImages[selectedImageIndex] || finalImages[0];
+  console.log("Main image URL:", mainImage);
+
+  const discountPercentage = calculateDiscountPercentage(
+    product.price,
+    product.discountPrice
+  );
+  const currentPrice = product.discountPrice || product.price;
+
+  return (
+    <div className="min-h-screen bg-artisan-brown-950">
+      {/* Header */}
+      <div className="bg-artisan-brown-900 border-b border-artisan-brown-700">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/products")}
+              className="text-artisan-gold-400 hover:text-artisan-gold-300"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại danh sách
+            </Button>
+
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/products")}
+                className="border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Quay lại sản phẩm
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-2 gap-12">
+          {/* Product Images */}
+          <div className="space-y-4">
+            {/* Main Image */}
+            <div className="aspect-square overflow-hidden rounded-lg bg-artisan-brown-800">
+              {mainImage ? (
+                <img
+                  src={mainImage}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("Image load error:", e);
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-full h-full flex items-center justify-center ${
+                  mainImage ? "hidden" : "flex"
+                }`}
+              >
+                <div className="text-center">
+                  <span className="text-artisan-brown-400 text-6xl block mb-2">
+                    📦
+                  </span>
+                  <p className="text-artisan-brown-300 text-sm">
+                    Không có ảnh sản phẩm
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Thumbnail Images */}
+            {finalImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-2">
+                {finalImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square overflow-hidden rounded-lg border-2 transition-colors ${
+                      selectedImageIndex === index
+                        ? "border-artisan-gold-500"
+                        : "border-artisan-brown-700 hover:border-artisan-brown-600"
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/100x100/8B4513/FFFFFF?text=No+Image";
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Product Info */}
+          <div className="space-y-6">
+            {/* Product Title */}
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                {product.name}
+              </h1>
+              <div className="flex items-center gap-4 text-artisan-brown-300">
+                <div className="flex items-center">
+                  <Star className="w-4 h-4 text-artisan-gold-500 fill-current" />
+                  <span className="ml-1">
+                    {product.averageRating
+                      ? `${product.averageRating}/5`
+                      : "Chưa có đánh giá"}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Heart className="w-4 h-4 text-red-500" />
+                  <span className="ml-1">{product.favoriteCount || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl font-bold text-artisan-gold-400">
+                  {formatPrice(currentPrice)}
+                </span>
+                {product.discountPrice &&
+                  product.discountPrice < product.price && (
+                    <>
+                      <span className="text-xl text-artisan-brown-400 line-through">
+                        {formatPrice(product.price)}
+                      </span>
+                      <span className="bg-red-500 text-white px-2 py-1 rounded text-sm font-bold">
+                        -{discountPercentage}%
+                      </span>
+                    </>
+                  )}
+              </div>
+            </div>
+
+            {/* Description */}
+            {product.description && (
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Mô tả sản phẩm
+                </h3>
+                <p className="text-artisan-brown-300 leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
+            )}
+
+            {/* Quantity and Add to Cart */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <span className="text-white font-medium">Số lượng:</span>
+                <div className="flex items-center border border-artisan-brown-700 rounded-lg">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="px-4 py-2 text-white min-w-[3rem] text-center">
+                    {quantity}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleQuantityChange(1)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={cartLoading}
+                  className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Product Details */}
+            <Card className="bg-artisan-brown-900 border-artisan-brown-700 p-4">
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Thông tin sản phẩm
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-artisan-brown-300">Danh mục:</span>
+                  <span className="text-white">
+                    {product.category || "Chưa phân loại"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-artisan-brown-300">Trạng thái:</span>
+                  <span className="text-green-400">Còn hàng</span>
+                </div>
+                {product.artist && (
+                  <div className="flex justify-between">
+                    <span className="text-artisan-brown-300">Nghệ nhân:</span>
+                    <span className="text-white">{product.artist}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="mt-12 pt-8 border-t border-artisan-brown-700">
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/products")}
+              className="border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white px-8 py-3"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Quay lại danh sách sản phẩm
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductDetail;
