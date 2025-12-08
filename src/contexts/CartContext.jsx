@@ -19,15 +19,32 @@ export const CartProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load cart items from API on mount - LUÔN LOAD TỪ BACKEND
+  // Kiểm tra đăng nhập
+  const isLoggedIn = () => {
+    try {
+      return Boolean(localStorage.getItem("access_token"));
+    } catch {
+      return false;
+    }
+  };
+
+  // Load cart items from API on mount - CHỈ KHI ĐÃ ĐĂNG NHẬP
   useEffect(() => {
-    // LUÔN load từ backend để đảm bảo đồng bộ
-    loadCartItems();
-    // Không dùng localStorage nữa vì nó gây mất đồng bộ
+    // Chỉ load từ backend khi đã đăng nhập
+    if (isLoggedIn()) {
+      loadCartItems();
+    }
   }, []);
 
   // Load cart items from API
   const loadCartItems = async () => {
+    // Không gọi API nếu chưa đăng nhập
+    if (!isLoggedIn()) {
+      setCartItems([]);
+      setCartItemCount(0);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -82,6 +99,14 @@ export const CartProvider = ({ children }) => {
 
   // Add item to cart - GỌI API VÀ RELOAD TỪ BACKEND
   const addToCart = async (productId, quantity = 1) => {
+    // Kiểm tra đăng nhập trước
+    if (!isLoggedIn()) {
+      return {
+        success: false,
+        message: "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng",
+      };
+    }
+
     try {
       setError(null);
 

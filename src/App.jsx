@@ -32,6 +32,9 @@ import ArtistManagement from "./components/Admin/ArtistManagement";
 // import CartPage from "@/components/Cart/CartPage";
 import CartPage from "@/components/Cart/CartPage";
 
+// Forum components
+import { ForumLayout, ForumTopicDetail, ForumThreadDetail } from "./components/Forum";
+
 function MainLayout() {
   return (
     <div className="min-h-screen bg-white dark:bg-artisan-brown-950 text-artisan-brown-900 dark:text-artisan-brown-50">
@@ -76,6 +79,10 @@ function App() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/cart" element={<CartPage />} />
+              {/* Forum Routes */}
+              <Route path="/forum" element={<ForumLayout />} />
+              <Route path="/forum/topic/:topicId" element={<ForumTopicDetail />} />
+              <Route path="/forum/thread/:threadId" element={<ForumThreadDetail />} />
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />
