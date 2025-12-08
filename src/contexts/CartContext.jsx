@@ -37,7 +37,7 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   // Load cart items from API
-  const loadCartItems = async () => {
+  const loadCartItems = async (showLoading = true) => {
     // Không gọi API nếu chưa đăng nhập
     if (!isLoggedIn()) {
       setCartItems([]);
@@ -46,7 +46,10 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      setLoading(true);
+      // Chỉ hiện loading khi được yêu cầu (lần đầu load)
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
       const response = await cartService.getCartItems();
 
@@ -93,7 +96,9 @@ export const CartProvider = ({ children }) => {
       setCartItems([]);
       setCartItemCount(0);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -114,8 +119,8 @@ export const CartProvider = ({ children }) => {
       const response = await cartService.addToCart(productId, quantity);
 
       if (response && response.isSuccess) {
-        // Reload từ backend để lấy data mới
-        await loadCartItems();
+        // Reload từ backend để lấy data mới (không hiện loading)
+        await loadCartItems(false);
         return { success: true, message: "Đã thêm sản phẩm vào giỏ hàng" };
       } else {
         throw new Error(response?.message || "Không thể thêm vào giỏ hàng");
@@ -143,15 +148,15 @@ export const CartProvider = ({ children }) => {
       const response = await cartService.updateCartItem(cartItemId, quantity);
 
       if (response && response.isSuccess) {
-        // Reload từ backend
-        await loadCartItems();
+        // Reload từ backend (không hiện loading)
+        await loadCartItems(false);
         return { success: true, message: "Đã cập nhật số lượng sản phẩm" };
       } else {
         throw new Error(response?.message || "Không thể cập nhật");
       }
     } catch (err) {
       console.error("Error updating cart:", err);
-      await loadCartItems(); // Reload anyway
+      await loadCartItems(false); // Reload anyway (không hiện loading)
       setError(err.message || "Không thể cập nhật");
       return { success: false, message: err.message || "Không thể cập nhật" };
     }
@@ -166,15 +171,15 @@ export const CartProvider = ({ children }) => {
       const response = await cartService.removeFromCart(cartItemId);
 
       if (response && response.isSuccess) {
-        // Reload từ backend
-        await loadCartItems();
+        // Reload từ backend (không hiện loading)
+        await loadCartItems(false);
         return { success: true, message: "Đã xóa sản phẩm khỏi giỏ hàng" };
       } else {
         throw new Error(response?.message || "Không thể xóa");
       }
     } catch (err) {
       console.error("Error removing:", err);
-      await loadCartItems(); // Reload anyway
+      await loadCartItems(false); // Reload anyway (không hiện loading)
       setError(err.message || "Không thể xóa");
       return { success: false, message: err.message || "Không thể xóa" };
     }
@@ -189,7 +194,7 @@ export const CartProvider = ({ children }) => {
       try {
         const response = await cartService.clearCart();
         if (response && response.isSuccess) {
-          await loadCartItems();
+          await loadCartItems(false);
           return { success: true, message: "Đã xóa tất cả" };
         }
       } catch {
