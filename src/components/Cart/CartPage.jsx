@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,7 @@ const CartPage = () => {
   const {
     cartItems,
     cartItemCount,
-    loading,
+    loading: initialLoading,
     error,
     updateCartItem,
     removeFromCart,
@@ -26,37 +26,41 @@ const CartPage = () => {
     getTotalPrice,
   } = useCart();
 
+  // State riêng để track item nào đang được update
+  const [updatingItems, setUpdatingItems] = useState({});
+
   // Format giá tiền
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
   const handleQuantityChange = async (cartItemId, newQuantity) => {
-    if (newQuantity < 1) {
-      // Xóa sản phẩm khi quantity < 1
-      const result = await removeFromCart(cartItemId);
-      if (result?.success) {
-        toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
+    // Ngăn click nhiều lần
+    if (updatingItems[cartItemId]) return;
+
+    setUpdatingItems((prev) => ({ ...prev, [cartItemId]: true }));
+
+    try {
+      if (newQuantity < 1) {
+        // Xóa sản phẩm khi quantity < 1
+        await removeFromCart(cartItemId);
       } else {
-        toast.error(result?.message || "Không thể xóa sản phẩm");
+        // Cập nhật số lượng (PUT /api/Carts/{cartItemId}/quantity)
+        await updateCartItem(cartItemId, newQuantity);
       }
-    } else {
-      // Cập nhật số lượng (PUT /api/Carts/{cartItemId}/quantity)
-      const result = await updateCartItem(cartItemId, newQuantity);
-      if (result?.success) {
-        toast.success("Đã cập nhật số lượng");
-      } else {
-        toast.error(result?.message || "Không thể cập nhật số lượng");
-      }
+    } finally {
+      setUpdatingItems((prev) => ({ ...prev, [cartItemId]: false }));
     }
   };
 
   const handleRemoveItem = async (cartItemId) => {
-    const result = await removeFromCart(cartItemId);
-    if (result?.success) {
-      toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
-    } else {
-      toast.error(result?.message || "Không thể xóa sản phẩm");
+    if (updatingItems[cartItemId]) return;
+
+    setUpdatingItems((prev) => ({ ...prev, [cartItemId]: true }));
+    try {
+      await removeFromCart(cartItemId);
+    } finally {
+      setUpdatingItems((prev) => ({ ...prev, [cartItemId]: false }));
     }
   };
 
@@ -64,18 +68,14 @@ const CartPage = () => {
     if (
       window.confirm("Bạn có chắc chắn muốn xóa tất cả sản phẩm khỏi giỏ hàng?")
     ) {
-      const result = await clearCart();
-      if (result?.success) {
-        toast.success("Đã xóa tất cả sản phẩm khỏi giỏ hàng");
-      } else {
-        toast.error(result?.message || "Không thể xóa giỏ hàng");
-      }
+      await clearCart();
     }
   };
 
   // Checkout được tách sang PaymentButton
 
-  if (loading) {
+  // Chỉ hiện loading khi lần đầu load trang và chưa có data
+  if (initialLoading && cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-artisan-brown-950 pt-20">
         <div className="container mx-auto px-4 py-16">
@@ -220,7 +220,8 @@ const CartPage = () => {
                                   item.quantity - 1
                                 )
                               }
-                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700"
+                              disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700 disabled:opacity-50"
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
@@ -236,7 +237,8 @@ const CartPage = () => {
                                   item.quantity + 1
                                 )
                               }
-                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700"
+                              disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                              className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700 disabled:opacity-50"
                             >
                               <Plus className="w-4 h-4" />
                             </Button>
@@ -258,7 +260,8 @@ const CartPage = () => {
                                 item.cartItemId || item.id || item.productId
                               )
                             }
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2"
+                            disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 disabled:opacity-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

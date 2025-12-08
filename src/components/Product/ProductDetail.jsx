@@ -125,24 +125,25 @@ const ProductDetail = () => {
     }
   }, [id, fetchProduct]);
 
-  const handleAddToCart = () => {
-    try {
-      const productData = {
-        productName: product.name,
-        price: product.discountPrice || product.price,
-        imageUrl: parseImages(product.images)[0], // First image
-        category: product.category?.name || "Chưa phân loại",
-        product: product, // Include full product data
-      };
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-      const result = addToCart(product.productId, quantity, productData);
+  const handleAddToCart = async () => {
+    if (isAddingToCart) return; // Ngăn click nhiều lần
+
+    try {
+      setIsAddingToCart(true);
+      const result = await addToCart(product.productId, quantity);
       if (result.success) {
-        // You can add a toast notification here
+        // Thêm thành công
+        alert("Đã thêm sản phẩm vào giỏ hàng!");
       } else {
-        console.error(result.message);
+        alert(result.message || "Không thể thêm vào giỏ hàng");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
+      alert("Có lỗi xảy ra khi thêm vào giỏ hàng");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -381,11 +382,13 @@ const ProductDetail = () => {
                   <div className="flex gap-4">
                     <Button
                       onClick={handleAddToCart}
-                      disabled={cartLoading}
+                      disabled={isAddingToCart || cartLoading}
                       className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
                     >
                       <ShoppingCart className="w-4 h-4 mr-2" />
-                      {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+                      {isAddingToCart || cartLoading
+                        ? "Đang thêm..."
+                        : "Thêm vào giỏ"}
                     </Button>
                     <Button
                       variant="outline"
