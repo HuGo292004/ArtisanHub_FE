@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,10 +24,33 @@ const CartPage = () => {
     removeFromCart,
     clearCart,
     getTotalPrice,
+    loadCartItems,
   } = useCart();
 
   // State riêng để track item nào đang được update
   const [updatingItems, setUpdatingItems] = useState({});
+
+  // Kiểm tra xem có vừa thanh toán xong không
+  useEffect(() => {
+    const checkRecentPayment = async () => {
+      const lastPaidOrder = localStorage.getItem("last_paid_order");
+      const paymentTime = localStorage.getItem("payment_success_time");
+      
+      if (lastPaidOrder && paymentTime) {
+        const timeDiff = Date.now() - parseInt(paymentTime);
+        // Nếu thanh toán trong vòng 2 phút gần đây
+        if (timeDiff < 2 * 60 * 1000) {
+          console.log("Phát hiện thanh toán gần đây, force reload giỏ hàng...");
+          await loadCartItems(false);
+          // Xóa flag để không reload lại
+          localStorage.removeItem("last_paid_order");
+          localStorage.removeItem("payment_success_time");
+        }
+      }
+    };
+    
+    checkRecentPayment();
+  }, [loadCartItems]);
 
   // Format giá tiền
   const formatPrice = (price) => {
