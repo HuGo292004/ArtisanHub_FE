@@ -57,6 +57,15 @@ const ProductCard = ({ product }) => {
       const result = await addToCart(productId, 1);
       if (result.success) {
         toast.success(result.message);
+        
+        // Nếu sản phẩm được lưu vào pending (chưa đăng nhập), hỏi có muốn đăng nhập ngay
+        if (result.isPending) {
+          setTimeout(() => {
+            if (window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")) {
+              navigate("/login");
+            }
+          }, 500);
+        }
       } else {
         toast.error(result.message);
       }
@@ -171,22 +180,18 @@ const ProductCard = ({ product }) => {
 
         {/* Nút hành động - luôn ở dưới cùng */}
         <div className="flex gap-2 mt-4">
-          {isLoggedIn && (
-            <Button
-              className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
-              size="sm"
-              onClick={handleAddToCart}
-              disabled={isAdding}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
-            </Button>
-          )}
+          <Button
+            className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+            size="sm"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+          >
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
+          </Button>
           <Button
             variant="outline"
-            className={`${
-              isLoggedIn ? "flex-1" : "w-full"
-            } border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50`}
+            className="flex-1 border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50"
             size="sm"
             onClick={handleProductClick}
           >

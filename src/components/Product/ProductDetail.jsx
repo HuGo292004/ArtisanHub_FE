@@ -14,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { productService } from "@/services/productService";
 import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/components/ui/Toast";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart, loading: cartLoading } = useCart();
+  const toast = useToast();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -134,14 +136,24 @@ const ProductDetail = () => {
       setIsAddingToCart(true);
       const result = await addToCart(product.productId, quantity);
       if (result.success) {
-        // Thêm thành công
-        alert("Đã thêm sản phẩm vào giỏ hàng!");
+        toast.success(result.message);
+
+        // Nếu sản phẩm được lưu vào pending (chưa đăng nhập), hỏi có muốn đăng nhập ngay
+        if (result.isPending) {
+          setTimeout(() => {
+            if (
+              window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")
+            ) {
+              navigate("/login");
+            }
+          }, 500);
+        }
       } else {
-        alert(result.message || "Không thể thêm vào giỏ hàng");
+        toast.error(result.message || "Không thể thêm vào giỏ hàng");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Có lỗi xảy ra khi thêm vào giỏ hàng");
+      toast.error("Có lỗi xảy ra khi thêm vào giỏ hàng");
     } finally {
       setIsAddingToCart(false);
     }
@@ -351,67 +363,57 @@ const ProductDetail = () => {
 
             {/* Quantity and Add to Cart */}
             <div className="space-y-4">
-              {isLoggedIn ? (
-                <>
-                  <div className="flex items-center gap-4">
-                    <span className="text-white font-medium">Số lượng:</span>
-                    <div className="flex items-center border border-artisan-brown-700 rounded-lg">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleQuantityChange(-1)}
-                        disabled={quantity <= 1}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <span className="px-4 py-2 text-white min-w-[3rem] text-center">
-                        {quantity}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleQuantityChange(1)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-4">
+                <span className="text-white font-medium">Số lượng:</span>
+                <div className="flex items-center border border-artisan-brown-700 rounded-lg">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="px-4 py-2 text-white min-w-[3rem] text-center">
+                    {quantity}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleQuantityChange(1)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
 
-                  <div className="flex gap-4">
-                    <Button
-                      onClick={handleAddToCart}
-                      disabled={isAddingToCart || cartLoading}
-                      className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      {isAddingToCart || cartLoading
-                        ? "Đang thêm..."
-                        : "Thêm vào giỏ"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-artisan-brown-800/50 rounded-lg border border-artisan-brown-700 text-center">
-                    <p className="text-artisan-brown-300 mb-3">
-                      Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng
-                    </p>
-                    <Button
-                      onClick={() => navigate("/login")}
-                      className="bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Đăng nhập để mua hàng
-                    </Button>
-                  </div>
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart || cartLoading}
+                  className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {isAddingToCart || cartLoading
+                    ? "Đang thêm..."
+                    : "Thêm vào giỏ"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-artisan-gold-500 text-artisan-gold-400 hover:bg-artisan-gold-500 hover:text-white"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {!isLoggedIn && (
+                <div className="p-3 bg-artisan-brown-800/30 rounded-lg border border-artisan-gold-500/30 text-center">
+                  <p className="text-artisan-gold-400 text-sm">
+                    💡 Sản phẩm sẽ được lưu và tự động thêm vào giỏ hàng sau khi
+                    bạn đăng nhập
+                  </p>
                 </div>
               )}
             </div>

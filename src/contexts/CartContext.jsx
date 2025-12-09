@@ -3,6 +3,9 @@ import { cartService } from "@/services/cartService";
 
 const CartContext = createContext();
 
+// Constants for localStorage
+const PENDING_CART_KEY = "pending_cart_items";
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -25,6 +28,47 @@ export const CartProvider = ({ children }) => {
       return Boolean(localStorage.getItem("access_token"));
     } catch {
       return false;
+    }
+  };
+
+  // Helper functions for localStorage cart
+  const getPendingCartItems = () => {
+    try {
+      const items = localStorage.getItem(PENDING_CART_KEY);
+      return items ? JSON.parse(items) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const savePendingCartItem = (productId, quantity) => {
+    try {
+      const pendingItems = getPendingCartItems();
+      const existingIndex = pendingItems.findIndex(
+        (item) => item.productId === productId
+      );
+
+      if (existingIndex >= 0) {
+        // Cập nhật quantity nếu sản phẩm đã có
+        pendingItems[existingIndex].quantity += quantity;
+      } else {
+        // Thêm sản phẩm mới
+        pendingItems.push({ productId, quantity });
+      }
+
+      localStorage.setItem(PENDING_CART_KEY, JSON.stringify(pendingItems));
+      return true;
+    } catch (err) {
+      console.error("Error saving to pending cart:", err);
+      return false;
+    }
+  };
+
+  const clearPendingCart = () => {
+    try {
+      localStorage.removeItem(PENDING_CART_KEY);
+    } catch (err) {
+      console.error("Error clearing pending cart:", err);
     }
   };
 
@@ -104,12 +148,21 @@ export const CartProvider = ({ children }) => {
 
   // Add item to cart - GỌI API VÀ RELOAD TỪ BACKEND
   const addToCart = async (productId, quantity = 1) => {
-    // Kiểm tra đăng nhập trước
+    // Nếu chưa đăng nhập, lưu vào localStorage
     if (!isLoggedIn()) {
-      return {
-        success: false,
-        message: "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng",
-      };
+      const saved = savePendingCartItem(productId, quantity);
+      if (saved) {
+        return {
+          success: true,
+          message: "Sản phẩm sẽ được thêm vào giỏ hàng sau khi đăng nhập",
+          isPending: true,
+        };
+      } else {
+        return {
+          success: false,
+          message: "Không thể lưu sản phẩm",
+        };
+      }
     }
 
     try {
@@ -190,6 +243,9 @@ export const CartProvider = ({ children }) => {
     try {
       setError(null);
 
+      // Xóa pending cart trong localStorage (nếu có)
+      clearPendingCart();
+
       // Thử gọi API clear
       try {
         const response = await cartService.clearCart();
@@ -209,6 +265,68 @@ export const CartProvider = ({ children }) => {
       setCartItemCount(0);
       setError(err.message || "Không thể xóa giỏ hàng");
       return { success: false, message: err.message || "Lỗi" };
+    }
+  };
+
+  // Sync pending cart items from localStorage to backend after login
+  const syncPendingCart = async () => {
+    if (!isLoggedIn()) {
+      return { success: false, message: "Chưa đăng nhập" };
+    }
+
+    const pendingItems = getPendingCartItems();
+
+    if (pendingItems.length === 0) {
+      return { success: true, message: "Không có sản phẩm chờ đồng bộ" };
+    }
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      // Thêm từng sản phẩm vào giỏ hàng
+      for (const item of pendingItems) {
+        try {
+          const response = await cartService.addToCart(
+            item.productId,
+            item.quantity
+          );
+          if (response && response.isSuccess) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          console.error("Error syncing item:", item, err);
+          failCount++;
+        }
+      }
+
+      // Xóa pending cart sau khi sync xong
+      clearPendingCart();
+
+      // Reload giỏ hàng từ backend
+      await loadCartItems(false);
+
+      if (successCount > 0) {
+        return {
+          success: true,
+          message: `Đã thêm ${successCount} sản phẩm vào giỏ hàng${
+            failCount > 0 ? ` (${failCount} sản phẩm thất bại)` : ""
+          }`,
+        };
+      } else {
+        return {
+          success: false,
+          message: "Không thể đồng bộ sản phẩm vào giỏ hàng",
+        };
+      }
+    } catch (err) {
+      console.error("Error syncing pending cart:", err);
+      return {
+        success: false,
+        message: "Lỗi khi đồng bộ giỏ hàng",
+      };
     }
   };
 
@@ -233,6 +351,7 @@ export const CartProvider = ({ children }) => {
     clearCart,
     loadCartItems,
     getTotalPrice,
+    syncPendingCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
