@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, Heart, ShoppingCart, Eye } from "lucide-react";
@@ -8,8 +9,11 @@ import { useToast } from "@/components/ui/Toast";
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
-  const { addToCart, loading: cartLoading } = useCart();
+  const { addToCart } = useCart();
   const toast = useToast();
+
+  // State riêng cho từng card
+  const [isAdding, setIsAdding] = useState(false);
 
   // Check if user is logged in
   const isLoggedIn = Boolean(localStorage.getItem("access_token"));
@@ -25,24 +29,8 @@ const ProductCard = ({ product }) => {
   } = product;
 
   // Format giá tiền
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN").format(price);
-  };
-
-  // Parse images from string
-  const parseImages = (imagesString) => {
-    try {
-      if (!imagesString) return [];
-      // If it's a single URL string, return an array with 1 element
-      if (typeof imagesString === "string" && !imagesString.startsWith("[")) {
-        return [imagesString];
-      }
-      const parsed = JSON.parse(imagesString);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      // If JSON parsing fails, treat it as a single URL string
-      return [imagesString];
-    }
+  const formatPrice = (value) => {
+    return new Intl.NumberFormat("vi-VN").format(value);
   };
 
   // Tính phần trăm giảm giá
@@ -62,25 +50,30 @@ const ProductCard = ({ product }) => {
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
-    try {
-      // Prepare product data for cart
-      const productData = {
-        productName: name,
-        price: discountPrice || price,
-        imageUrl: parseImages(images)[0], // First image
-        category: category?.name || "Chưa phân loại",
-        product: product, // Include full product data
-      };
+    if (isAdding) return; // Ngăn click nhiều lần
 
-      const result = await addToCart(productId, 1, productData);
+    setIsAdding(true);
+    try {
+      const result = await addToCart(productId, 1);
       if (result.success) {
         toast.success(result.message);
+        
+        // Nếu sản phẩm được lưu vào pending (chưa đăng nhập), hỏi có muốn đăng nhập ngay
+        if (result.isPending) {
+          setTimeout(() => {
+            if (window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")) {
+              navigate("/login");
+            }
+          }, 500);
+        }
       } else {
         toast.error(result.message);
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Không thể thêm sản phẩm vào giỏ hàng");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -187,22 +180,18 @@ const ProductCard = ({ product }) => {
 
         {/* Nút hành động - luôn ở dưới cùng */}
         <div className="flex gap-2 mt-4">
-          {isLoggedIn && (
-            <Button
-              className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
-              size="sm"
-              onClick={handleAddToCart}
-              disabled={cartLoading}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
-            </Button>
-          )}
+          <Button
+            className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+            size="sm"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+          >
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
+          </Button>
           <Button
             variant="outline"
-            className={`${
-              isLoggedIn ? "flex-1" : "w-full"
-            } border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50`}
+            className="flex-1 border-artisan-brown-300 text-artisan-brown-700 hover:bg-artisan-brown-50"
             size="sm"
             onClick={handleProductClick}
           >

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -13,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { productService } from "@/services/productService";
 import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/components/ui/Toast";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart, loading: cartLoading } = useCart();
+  const toast = useToast();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,34 +28,55 @@ const ProductDetail = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
+  const isLoggedIn = Boolean(localStorage.getItem("access_token"));
+
   // Parse images from string
   const parseImages = (imagesString) => {
     try {
       if (!imagesString) {
-        console.log("No images string provided");
         return [];
       }
 
-      console.log("Raw images string:", imagesString);
-
       // Nếu đã là array
       if (Array.isArray(imagesString)) {
-        return imagesString;
+        return imagesString.filter((img) => img && typeof img === "string");
       }
 
-      // Nếu là string, thử parse JSON
+      // Nếu là string
       if (typeof imagesString === "string") {
-        const parsed = JSON.parse(imagesString);
-        return Array.isArray(parsed) ? parsed : [imagesString];
+        const trimmed = imagesString.trim();
+
+        // Nếu bắt đầu bằng [ thì có thể là JSON array
+        if (trimmed.startsWith("[")) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            return Array.isArray(parsed) ? parsed.filter((img) => img) : [];
+          } catch {
+            // Không phải JSON hợp lệ, xử lý như string thường
+          }
+        }
+
+        // Nếu là URL đơn lẻ (bắt đầu bằng http hoặc https)
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+          return [trimmed];
+        }
+
+        // Nếu có dấu phẩy, có thể là danh sách URL cách nhau bởi dấu phẩy
+        if (trimmed.includes(",")) {
+          return trimmed
+            .split(",")
+            .map((url) => url.trim())
+            .filter((url) => url);
+        }
+
+        // Trả về như URL đơn lẻ nếu có giá trị
+        if (trimmed) {
+          return [trimmed];
+        }
       }
 
       return [];
     } catch (error) {
-      console.error("Error parsing images:", error);
-      // Nếu parse JSON thất bại, thử coi như là URL đơn lẻ
-      if (typeof imagesString === "string" && imagesString.trim()) {
-        return [imagesString.trim()];
-      }
       return [];
     }
   };
@@ -77,30 +101,20 @@ const ProductDetail = () => {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching product with ID:", id);
       // Thử endpoint khác nếu getProductForCustomer không hoạt động
       let response;
       try {
         response = await productService.getProductForCustomer(id);
-        console.log("getProductForCustomer Response:", response);
       } catch (customerError) {
-        console.warn(
-          "getProductForCustomer failed, trying getProductById:",
-          customerError
-        );
         response = await productService.getProductById(id);
-        console.log("getProductById Response:", response);
       }
 
       if (response && response.isSuccess && response.data) {
-        console.log("Product data:", response.data);
         setProduct(response.data);
       } else {
-        console.warn("API response format không đúng:", response);
         setError("Không tìm thấy sản phẩm");
       }
     } catch (err) {
-      console.error("Error fetching product:", err);
       setError("Không thể tải thông tin sản phẩm");
     } finally {
       setLoading(false);
@@ -113,28 +127,35 @@ const ProductDetail = () => {
     }
   }, [id, fetchProduct]);
 
-  const handleAddToCart = () => {
-    try {
-      console.log("🔍 Product data:", product);
-      // Prepare product data for cart
-      const productData = {
-        productName: product.name,
-        price: product.discountPrice || product.price,
-        imageUrl: parseImages(product.images)[0], // First image
-        category: product.category?.name || "Chưa phân loại",
-        product: product, // Include full product data
-      };
-      console.log("📦 Prepared productData:", productData);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-      const result = addToCart(product.productId, quantity, productData);
+  const handleAddToCart = async () => {
+    if (isAddingToCart) return; // Ngăn click nhiều lần
+
+    try {
+      setIsAddingToCart(true);
+      const result = await addToCart(product.productId, quantity);
       if (result.success) {
-        console.log(result.message);
-        // You can add a toast notification here
+        toast.success(result.message);
+
+        // Nếu sản phẩm được lưu vào pending (chưa đăng nhập), hỏi có muốn đăng nhập ngay
+        if (result.isPending) {
+          setTimeout(() => {
+            if (
+              window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")
+            ) {
+              navigate("/login");
+            }
+          }, 500);
+        }
       } else {
-        console.error(result.message);
+        toast.error(result.message || "Không thể thêm vào giỏ hàng");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast.error("Có lỗi xảy ra khi thêm vào giỏ hàng");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -170,8 +191,6 @@ const ProductDetail = () => {
   }
 
   const images = parseImages(product.images);
-  console.log("Raw product.images:", product.images);
-  console.log("Parsed images:", images);
 
   // Fallback images nếu không có ảnh từ API
   const fallbackImages = [
@@ -182,7 +201,6 @@ const ProductDetail = () => {
 
   const finalImages = images.length > 0 ? images : fallbackImages;
   const mainImage = finalImages[selectedImageIndex] || finalImages[0];
-  console.log("Main image URL:", mainImage);
 
   const discountPercentage = calculateDiscountPercentage(
     product.price,
@@ -224,23 +242,28 @@ const ProductDetail = () => {
           {/* Product Images */}
           <div className="space-y-4">
             {/* Main Image */}
-            <div className="aspect-square overflow-hidden rounded-lg bg-artisan-brown-800">
+            <div className="aspect-square overflow-hidden rounded-lg bg-artisan-brown-800 flex items-center justify-center">
               {mainImage ? (
                 <img
                   src={mainImage}
                   alt={product.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.error("Image load error:", e);
+                    // Ẩn ảnh lỗi và hiện placeholder
                     e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
+                    const placeholder =
+                      e.target.parentElement.querySelector(
+                        ".image-placeholder"
+                      );
+                    if (placeholder) placeholder.style.display = "flex";
                   }}
                 />
               ) : null}
               <div
-                className={`w-full h-full flex items-center justify-center ${
+                className={`image-placeholder w-full h-full items-center justify-center ${
                   mainImage ? "hidden" : "flex"
                 }`}
+                style={{ display: mainImage ? "none" : "flex" }}
               >
                 <div className="text-center">
                   <span className="text-artisan-brown-400 text-6xl block mb-2">
@@ -271,8 +294,10 @@ const ProductDetail = () => {
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
+                        // Thay thế bằng placeholder khi ảnh lỗi
+                        e.target.onerror = null; // Tránh loop vô hạn
                         e.target.src =
-                          "https://via.placeholder.com/100x100/8B4513/FFFFFF?text=No+Image";
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%238B4513' width='100' height='100'/%3E%3Ctext fill='%23FFFFFF' font-size='12' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E";
                       }}
                     />
                   </button>
@@ -367,11 +392,13 @@ const ProductDetail = () => {
               <div className="flex gap-4">
                 <Button
                   onClick={handleAddToCart}
-                  disabled={cartLoading}
+                  disabled={isAddingToCart || cartLoading}
                   className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  {cartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+                  {isAddingToCart || cartLoading
+                    ? "Đang thêm..."
+                    : "Thêm vào giỏ"}
                 </Button>
                 <Button
                   variant="outline"
@@ -380,6 +407,15 @@ const ProductDetail = () => {
                   <Share2 className="w-4 h-4" />
                 </Button>
               </div>
+
+              {!isLoggedIn && (
+                <div className="p-3 bg-artisan-brown-800/30 rounded-lg border border-artisan-gold-500/30 text-center">
+                  <p className="text-artisan-gold-400 text-sm">
+                    💡 Sản phẩm sẽ được lưu và tự động thêm vào giỏ hàng sau khi
+                    bạn đăng nhập
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Product Details */}

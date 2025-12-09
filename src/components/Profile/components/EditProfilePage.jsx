@@ -28,6 +28,7 @@ const EditProfilePage = () => {
     Address: "",
     Gender: "",
     Dob: "",
+    Password: "", // Thêm Password field
     AvatarFile: null,
   });
 
@@ -42,13 +43,27 @@ const EditProfilePage = () => {
       if (response && response.isSuccess && response.data) {
         const userData = response.data;
         setUser(userData);
+        // Map gender từ tiếng Anh sang tiếng Việt nếu cần
+        const genderMap = {
+          Male: "Nam",
+          Female: "Nữ",
+          Other: "Khác",
+        };
+        const gender = userData.gender || "";
+        const mappedGender = genderMap[gender] || gender;
+
         setFormData({
           Username: userData.username || "",
           Email: userData.email || "",
-          Phone: userData.phone || "",
-          Address: userData.address || "",
-          Gender: userData.gender || "",
+          Phone:
+            userData.phone && userData.phone !== "string" ? userData.phone : "",
+          Address:
+            userData.address && userData.address !== "string"
+              ? userData.address
+              : "",
+          Gender: mappedGender,
           Dob: userData.dob ? userData.dob.split("T")[0] : "",
+          Password: "", // Không hiển thị password cũ
           AvatarFile: null,
         });
       } else {
@@ -90,20 +105,63 @@ const EditProfilePage = () => {
     try {
       const formDataToSend = new FormData();
 
-      // Add all form fields (except Password)
-      Object.keys(formData).forEach((key) => {
-        if (key === "AvatarFile") {
-          // Handle file upload specially
-          if (formData[key] && formData[key] instanceof File) {
-            formDataToSend.append(key, formData[key]);
-          }
-        } else if (key !== "Password") {
-          // Handle other fields (skip Password)
-          if (formData[key] !== null && formData[key] !== "") {
-            formDataToSend.append(key, formData[key]);
-          }
-        }
-      });
+      // Theo API spec: Username, Password, Email là required và PHẢI có giá trị
+      // Các field khác (Phone, Address, Gender, Dob, AvatarFile) là optional
+
+      // Validate required fields
+      if (!formData.Username?.trim()) {
+        setError("Tên người dùng không được để trống");
+        setSaving(false);
+        return;
+      }
+
+      if (!formData.Email?.trim()) {
+        setError("Email không được để trống");
+        setSaving(false);
+        return;
+      }
+
+      if (!formData.Password?.trim()) {
+        setError("Mật khẩu không được để trống");
+        setSaving(false);
+        return;
+      }
+
+      // Required fields - gửi với giá trị đã validate
+      formDataToSend.append("Username", formData.Username.trim());
+      formDataToSend.append("Email", formData.Email.trim());
+      formDataToSend.append("Password", formData.Password.trim());
+
+      // Optional fields - chỉ gửi khi có giá trị thực (không phải "string" placeholder)
+      if (
+        formData.Phone &&
+        formData.Phone.trim() &&
+        formData.Phone !== "string"
+      ) {
+        formDataToSend.append("Phone", formData.Phone.trim());
+      }
+
+      if (
+        formData.Address &&
+        formData.Address.trim() &&
+        formData.Address !== "string"
+      ) {
+        formDataToSend.append("Address", formData.Address.trim());
+      }
+
+      if (formData.Gender && formData.Gender.trim()) {
+        formDataToSend.append("Gender", formData.Gender.trim());
+      }
+
+      if (formData.Dob && formData.Dob.trim()) {
+        formDataToSend.append("Dob", formData.Dob.trim());
+      }
+
+      // AvatarFile: chỉ gửi khi có file mới được chọn
+      // Nếu không có file mới, không gửi field này (hoặc có thể gửi empty string tùy API)
+      if (formData.AvatarFile && formData.AvatarFile instanceof File) {
+        formDataToSend.append("AvatarFile", formData.AvatarFile);
+      }
 
       // Debug: Log form data
       console.log("Form data being sent:");
@@ -111,10 +169,10 @@ const EditProfilePage = () => {
         if (key === "AvatarFile") {
           console.log(
             `${key}:`,
-            value instanceof File ? `File: ${value.name}` : value
+            value instanceof File ? `File: ${value.name}` : value || "(empty)"
           );
         } else {
-          console.log(`${key}:`, value);
+          console.log(`${key}:`, value || "(empty)");
         }
       }
 
@@ -125,22 +183,28 @@ const EditProfilePage = () => {
 
       if (response && response.isSuccess) {
         setSuccess(true);
-        // Update user data with new avatar
-        if (response.data && response.data.avatar) {
-          setUser((prev) => ({
-            ...prev,
-            avatar: response.data.avatar,
-          }));
-        }
-        // Force refresh profile data
+        // Navigate back to profile with refresh flag
         setTimeout(() => {
-          window.location.href = "/profile";
-        }, 2000);
+          navigate("/profile?refresh=true", { replace: true });
+        }, 1500);
       } else {
-        setError("Cập nhật thông tin thất bại");
+        const errorMsg = response?.message || "Cập nhật thông tin thất bại";
+        setError(errorMsg);
+        console.error("Update failed:", response);
       }
-    } catch {
-      setError("Cập nhật thông tin thất bại");
+    } catch (err) {
+      console.error("Update error:", err);
+      const errorMessage =
+        err?.message || err?.data?.message || "Cập nhật thông tin thất bại";
+      setError(errorMessage);
+
+      // Log chi tiết lỗi từ server
+      if (err?.data) {
+        console.error("Error details:", err.data);
+      }
+      if (err?.status) {
+        console.error("Error status:", err.status);
+      }
     } finally {
       setSaving(false);
     }
@@ -306,6 +370,24 @@ const EditProfilePage = () => {
                       placeholder="Nhập email"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-artisan-brown-300 text-sm font-medium mb-2">
+                      Mật khẩu *
+                    </label>
+                    <input
+                      type="password"
+                      name="Password"
+                      value={formData.Password}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
+                      placeholder="Nhập mật khẩu"
+                    />
+                    <p className="text-artisan-brown-400 text-xs mt-1">
+                      Mật khẩu là bắt buộc để cập nhật thông tin
+                    </p>
+                  </div>
                 </div>
               </Card>
 
@@ -324,10 +406,11 @@ const EditProfilePage = () => {
                     <input
                       type="tel"
                       name="Phone"
-                      value={formData.Phone}
+                      value={formData.Phone === "string" ? "" : formData.Phone}
                       onChange={handleInputChange}
+                      maxLength={10}
                       className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
-                      placeholder="Nhập số điện thoại"
+                      placeholder="0901234567"
                     />
                   </div>
 
@@ -337,11 +420,13 @@ const EditProfilePage = () => {
                     </label>
                     <textarea
                       name="Address"
-                      value={formData.Address}
+                      value={
+                        formData.Address === "string" ? "" : formData.Address
+                      }
                       onChange={handleInputChange}
                       rows={3}
                       className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
-                      placeholder="Nhập địa chỉ"
+                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
                     />
                   </div>
                 </div>
@@ -366,9 +451,9 @@ const EditProfilePage = () => {
                       className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                     >
                       <option value="">Chọn giới tính</option>
-                      <option value="Male">Nam</option>
-                      <option value="Female">Nữ</option>
-                      <option value="Other">Khác</option>
+                      <option value="Nam">Nam</option>
+                      <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
                     </select>
                   </div>
 

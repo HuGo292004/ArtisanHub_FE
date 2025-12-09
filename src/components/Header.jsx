@@ -12,7 +12,7 @@ export default function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userRole, setUserRole] = useState("");
   const profileRef = useRef(null);
-  const { cartItemCount } = useCart();
+  const { cartItemCount, loadCartItems } = useCart();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,6 +53,27 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [isProfileOpen]);
 
+  // Kiểm tra và reload giỏ hàng sau khi thanh toán
+  useEffect(() => {
+    const checkAndReloadCart = async () => {
+      if (!isLoggedIn) return;
+
+      const lastPaidOrder = localStorage.getItem("last_paid_order");
+      const paymentTime = localStorage.getItem("payment_success_time");
+
+      if (lastPaidOrder && paymentTime) {
+        const timeDiff = Date.now() - parseInt(paymentTime);
+        // Nếu thanh toán trong vòng 2 phút gần đây
+        if (timeDiff < 2 * 60 * 1000) {
+          console.log("Header: Reload giỏ hàng sau thanh toán...");
+          await loadCartItems(false);
+        }
+      }
+    };
+
+    checkAndReloadCart();
+  }, [isLoggedIn, loadCartItems]);
+
   const handleCartClick = () => {
     navigate("/cart");
     setIsProfileOpen(false); // Close profile if open
@@ -76,6 +97,7 @@ export default function Header() {
     { name: "Trang chủ", href: "/" },
     { name: "Sản phẩm", href: "/products" },
     { name: "Cửa hàng", href: "/stores" },
+    { name: "Diễn đàn", href: "/forum" },
     { name: "Về chúng tôi", href: "/about" },
     { name: "Liên hệ", href: "/contact" },
   ];

@@ -1,31 +1,206 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { register as registerApi } from "@/services/authService";
 import { useToast } from "@/components/ui/Toast";
 
+// Validation schema với Yup
+const validationSchema = Yup.object({
+  username: Yup.string()
+    .required("Không được để trống")
+    .matches(
+      /^[a-zA-Z0-9_]+$/,
+      "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới"
+    ),
+  password: Yup.string()
+    .required("Không được để trống")
+    .min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  email: Yup.string()
+    .required("Không được để trống")
+    .email("Email không đúng định dạng"),
+  phone: Yup.string()
+    .nullable()
+    .matches(/^[0-9]{10}$/, "Số điện thoại phải có đúng 10 chữ số")
+    .transform((value) => (value === "" ? null : value)),
+  address: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  dob: Yup.string().nullable(),
+});
+
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    username: "",
-    password: "",
-    email: "",
-    phone: "",
-    address: "",
-    gender: "Other",
-    dob: "",
-  });
   const [avatarFile, setAvatarFile] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const toast = useToast();
-  const [errors, setErrors] = useState({});
 
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
+  const formik = useFormik({
+    initialValues: {
+      username: "",
+      password: "",
+      email: "",
+      phone: "",
+      address: "",
+      gender: "Other",
+      dob: "",
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values, { setFieldError, setSubmitting }) => {
+      setErrorMsg("");
+      setSuccessMsg("");
+      setSubmitting(true);
+
+      try {
+        // Create FormData for multipart/form-data
+        const formData = new FormData();
+        formData.append("Username", values.username);
+        formData.append("Password", values.password);
+        formData.append("Email", values.email);
+        if (values.phone?.trim()) formData.append("Phone", values.phone);
+        if (values.address?.trim()) formData.append("Address", values.address);
+        if (values.gender?.trim()) formData.append("Gender", values.gender);
+        if (values.dob?.trim()) formData.append("Dob", values.dob);
+        if (avatarFile) formData.append("AvatarFile", avatarFile);
+
+        const res = await registerApi(formData);
+        if (res?.isSuccess) {
+          setSuccessMsg("Đăng ký thành công. Vui lòng đăng nhập.");
+          toast.success("Đăng ký thành công.");
+          setTimeout(() => navigate("/login", { replace: true }), 800);
+        } else {
+          throw new Error(res?.message || "Đăng ký thất bại");
+        }
+      } catch (err) {
+        const status = err?.status;
+        const errorData = err?.data;
+        let errorMessage = err?.message || "Đăng ký thất bại";
+
+        // Xử lý lỗi 409 Conflict (thường là email/username đã tồn tại)
+        if (status === 409) {
+          errorMessage = "Thông tin đã tồn tại trong hệ thống";
+
+          // Kiểm tra thông báo lỗi từ server để xác định trường nào bị trùng
+          const serverMessage = (
+            errorData?.message ||
+            err?.message ||
+            ""
+          ).toLowerCase();
+
+          if (
+            serverMessage.includes("username") ||
+            serverMessage.includes("tên đăng nhập") ||
+            serverMessage.includes("tài khoản")
+          ) {
+            setFieldError("username", "Tên đăng nhập đã được sử dụng");
+            errorMessage =
+              "Tên đăng nhập đã được sử dụng. Vui lòng chọn tên khác.";
+          } else if (
+            serverMessage.includes("email") ||
+            serverMessage.includes("thư điện tử") ||
+            serverMessage.includes("e-mail")
+          ) {
+            setFieldError("email", "Email đã được sử dụng");
+            errorMessage =
+              "Email đã được sử dụng. Vui lòng sử dụng email khác.";
+          } else if (
+            serverMessage.includes("phone") ||
+            serverMessage.includes("số điện thoại") ||
+            serverMessage.includes("điện thoại")
+          ) {
+            setFieldError("phone", "Số điện thoại đã được sử dụng");
+            errorMessage =
+              "Số điện thoại đã được sử dụng. Vui lòng sử dụng số khác.";
+          } else {
+            // Nếu không xác định được trường cụ thể, hiển thị thông báo chung
+            errorMessage =
+              errorData?.message ||
+              "Thông tin đã tồn tại trong hệ thống. Vui lòng kiểm tra lại.";
+          }
+        } else if (status === 400) {
+          // Xử lý lỗi validation từ server
+          errorMessage = "Thông tin không hợp lệ";
+
+          if (errorData?.errors) {
+            const serverErrors = errorData.errors;
+            Object.keys(serverErrors).forEach((key) => {
+              const fieldName = key.toLowerCase();
+              const errorValue = Array.isArray(serverErrors[key])
+                ? serverErrors[key][0]
+                : serverErrors[key];
+
+              if (fieldName.includes("username") || fieldName === "username") {
+                setFieldError(
+                  "username",
+                  errorValue || "Tên đăng nhập không hợp lệ"
+                );
+              } else if (fieldName.includes("email") || fieldName === "email") {
+                setFieldError("email", errorValue || "Email không hợp lệ");
+              } else if (
+                fieldName.includes("password") ||
+                fieldName === "password"
+              ) {
+                setFieldError(
+                  "password",
+                  errorValue || "Mật khẩu không hợp lệ"
+                );
+              } else if (fieldName.includes("phone") || fieldName === "phone") {
+                setFieldError(
+                  "phone",
+                  errorValue || "Số điện thoại không hợp lệ"
+                );
+              } else if (
+                fieldName.includes("address") ||
+                fieldName === "address"
+              ) {
+                setFieldError("address", errorValue || "Địa chỉ không hợp lệ");
+              } else if (fieldName.includes("dob") || fieldName === "dob") {
+                setFieldError("dob", errorValue || "Ngày sinh không hợp lệ");
+              } else if (
+                fieldName.includes("gender") ||
+                fieldName === "gender"
+              ) {
+                setFieldError("gender", errorValue || "Giới tính không hợp lệ");
+              }
+            });
+
+            // Nếu có lỗi validation, cập nhật thông báo chung
+            if (Object.keys(errorData.errors).length > 0) {
+              errorMessage = "Vui lòng kiểm tra lại thông tin đã nhập";
+            }
+          } else if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } else if (status === 422) {
+          // Unprocessable Entity - thường là lỗi validation
+          errorMessage = errorData?.message || "Dữ liệu không hợp lệ";
+          if (errorData?.errors) {
+            const serverErrors = errorData.errors;
+            Object.keys(serverErrors).forEach((key) => {
+              const fieldName = key.toLowerCase();
+              const errorValue = Array.isArray(serverErrors[key])
+                ? serverErrors[key][0]
+                : serverErrors[key];
+
+              if (fieldName.includes("username"))
+                setFieldError("username", errorValue);
+              else if (fieldName.includes("email"))
+                setFieldError("email", errorValue);
+              else if (fieldName.includes("password"))
+                setFieldError("password", errorValue);
+              else if (fieldName.includes("phone"))
+                setFieldError("phone", errorValue);
+            });
+          }
+        }
+
+        setErrorMsg(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const onAvatarFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -56,51 +231,7 @@ export default function RegisterForm() {
         <form
           className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-5"
           noValidate
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setErrorMsg("");
-            setSuccessMsg("");
-            setIsSubmitting(true);
-            // client-side required validation
-            const nextErrors = {};
-            if (!form.username?.trim())
-              nextErrors.username = "Không được để trống";
-            if (!form.password?.trim())
-              nextErrors.password = "Không được để trống";
-            if (!form.email?.trim()) nextErrors.email = "Không được để trống";
-            if (Object.keys(nextErrors).length > 0) {
-              setErrors(nextErrors);
-              setIsSubmitting(false);
-              return;
-            }
-            try {
-              // Create FormData for multipart/form-data
-              const formData = new FormData();
-              formData.append("Username", form.username);
-              formData.append("Password", form.password);
-              formData.append("Email", form.email);
-              if (form.phone?.trim()) formData.append("Phone", form.phone);
-              if (form.address?.trim())
-                formData.append("Address", form.address);
-              if (form.gender?.trim()) formData.append("Gender", form.gender);
-              if (form.dob?.trim()) formData.append("Dob", form.dob);
-              if (avatarFile) formData.append("AvatarFile", avatarFile);
-
-              const res = await registerApi(formData);
-              if (res?.isSuccess) {
-                setSuccessMsg("Đăng ký thành công. Vui lòng đăng nhập.");
-                toast.success("Đăng ký thành công.");
-                setTimeout(() => navigate("/login", { replace: true }), 800);
-              } else {
-                throw new Error(res?.message || "Đăng ký thất bại");
-              }
-            } catch (err) {
-              setErrorMsg(err?.message || "Đăng ký thất bại");
-              toast.error(err?.message || "Đăng ký thất bại");
-            } finally {
-              setIsSubmitting(false);
-            }
-          }}
+          onSubmit={formik.handleSubmit}
         >
           <div>
             <label
@@ -112,13 +243,17 @@ export default function RegisterForm() {
             <input
               id="username"
               name="username"
-              value={form.username}
-              onChange={onChange}
+              type="text"
+              value={formik.values.username}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="nghedanh_01"
             />
-            {errors.username && (
-              <p className="mt-1 text-xs text-red-300">{errors.username}</p>
+            {formik.touched.username && formik.errors.username && (
+              <p className="mt-1 text-xs text-red-300">
+                {formik.errors.username}
+              </p>
             )}
           </div>
           <div>
@@ -132,13 +267,16 @@ export default function RegisterForm() {
               id="password"
               name="password"
               type="password"
-              value={form.password}
-              onChange={onChange}
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="********"
             />
-            {errors.password && (
-              <p className="mt-1 text-xs text-red-300">{errors.password}</p>
+            {formik.touched.password && formik.errors.password && (
+              <p className="mt-1 text-xs text-red-300">
+                {formik.errors.password}
+              </p>
             )}
           </div>
           <div>
@@ -152,13 +290,14 @@ export default function RegisterForm() {
               id="email"
               name="email"
               type="email"
-              value={form.email}
-              onChange={onChange}
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="user@example.com"
             />
-            {errors.email && (
-              <p className="mt-1 text-xs text-red-300">{errors.email}</p>
+            {formik.touched.email && formik.errors.email && (
+              <p className="mt-1 text-xs text-red-300">{formik.errors.email}</p>
             )}
           </div>
           <div>
@@ -174,11 +313,17 @@ export default function RegisterForm() {
             <input
               id="phone"
               name="phone"
-              value={form.phone}
-              onChange={onChange}
+              type="tel"
+              value={formik.values.phone}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="0901234567"
+              maxLength={10}
             />
+            {formik.touched.phone && formik.errors.phone && (
+              <p className="mt-1 text-xs text-red-300">{formik.errors.phone}</p>
+            )}
           </div>
           <div className="md:col-span-2">
             <label
@@ -193,11 +338,18 @@ export default function RegisterForm() {
             <input
               id="address"
               name="address"
-              value={form.address}
-              onChange={onChange}
+              type="text"
+              value={formik.values.address}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
               placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
             />
+            {formik.touched.address && formik.errors.address && (
+              <p className="mt-1 text-xs text-red-300">
+                {formik.errors.address}
+              </p>
+            )}
           </div>
           <div>
             <label
@@ -241,10 +393,14 @@ export default function RegisterForm() {
               id="dob"
               name="dob"
               type="date"
-              value={form.dob}
-              onChange={onChange}
+              value={formik.values.dob}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white placeholder-white/70 outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
             />
+            {formik.touched.dob && formik.errors.dob && (
+              <p className="mt-1 text-xs text-red-300">{formik.errors.dob}</p>
+            )}
           </div>
           <div>
             <label
@@ -259,8 +415,9 @@ export default function RegisterForm() {
             <select
               id="gender"
               name="gender"
-              value={form.gender}
-              onChange={onChange}
+              value={formik.values.gender}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               className="mt-2 w-full rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-white outline-none backdrop-blur-md focus:border-white/50 focus:ring-2 focus:ring-white/30"
             >
               <option className="bg-artisan-brown-900" value="Male">
@@ -273,17 +430,20 @@ export default function RegisterForm() {
                 Khác
               </option>
             </select>
+            {formik.touched.gender && formik.errors.gender && (
+              <p className="mt-1 text-xs text-red-300">
+                {formik.errors.gender}
+              </p>
+            )}
           </div>
-
-          {/* Thông báo đã chuyển lên góc trên bên phải */}
 
           <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mt-2">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={formik.isSubmitting}
               className="w-full sm:w-auto rounded-xl bg-white/90 px-5 py-3 font-semibold text-artisan-brown-900 shadow-md transition hover:bg-yellow-500 hover:shadow-lg active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Đang đăng ký..." : "Đăng ký"}
+              {formik.isSubmitting ? "Đang đăng ký..." : "Đăng ký"}
             </button>
             <Link
               to="/login"

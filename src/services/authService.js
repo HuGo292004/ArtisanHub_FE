@@ -17,11 +17,8 @@ export function login(payload) {
 }
 
 export function register(payload) {
-  return axiosClient.post("/api/v1/Account", payload, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  // Không set Content-Type khi dùng FormData, để axios tự động set với boundary
+  return axiosClient.post("/api/v1/Account", payload);
 }
 
 export function getProfile() {
@@ -29,11 +26,8 @@ export function getProfile() {
 }
 
 export function updateProfile(accountId, formData) {
-  return axiosClient.put(`/api/v1/Account/${accountId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  // Không set Content-Type khi dùng FormData, để axios tự động set với boundary
+  return axiosClient.put(`/api/v1/Account/${accountId}`, formData);
 }
 
 export function getArtistProfile() {
@@ -41,9 +35,6 @@ export function getArtistProfile() {
 }
 
 export function createProduct(formData) {
-  return axiosClient.post("/api/my-products", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  // Không set Content-Type khi dùng FormData, để axios tự động set với boundary
+  return axiosClient.post("/api/my-products", formData);
 }

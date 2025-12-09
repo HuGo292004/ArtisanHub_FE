@@ -162,11 +162,17 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
       }
 
       // Sử dụng shippingAddress từ form đã nhập
+      // Thêm returnUrl và cancelUrl để backend biết redirect về đâu
+      const baseUrl = window.location.origin;
+      const returnUrl = `${baseUrl}/payment/success`;
+      const cancelUrl = `${baseUrl}/payment/success`;
 
       const payload = {
         accountId,
         cartItemIds,
         shippingAddress,
+        returnUrl,
+        cancelUrl,
       };
 
       const res = await orderService.checkout(payload);

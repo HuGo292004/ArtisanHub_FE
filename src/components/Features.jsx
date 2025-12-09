@@ -1,4 +1,5 @@
 import { Shield, Truck, Heart, Award, Users, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -8,6 +9,19 @@ import {
 } from "@/components/ui/card";
 
 export default function Features() {
+  const navigate = useNavigate();
+
+  const handleRegisterClick = () => {
+    // Kiểm tra xem user đã đăng nhập chưa
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      // Nếu đã đăng nhập, chuyển đến profile với form đăng ký artist
+      navigate("/profile?register=artist");
+    } else {
+      // Nếu chưa đăng nhập, chuyển đến trang đăng ký
+      navigate("/register");
+    }
+  };
   const features = [
     {
       icon: Shield,
@@ -106,10 +120,16 @@ export default function Features() {
               thủ công mỹ nghệ phong phú
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-artisan-gold-600 px-8 py-3 rounded-lg font-semibold hover:bg-artisan-gold-50 transition-colors duration-200">
+              <button
+                onClick={handleRegisterClick}
+                className="bg-white text-artisan-gold-600 px-8 py-3 rounded-lg font-semibold hover:bg-artisan-gold-50 transition-colors duration-200"
+              >
                 Đăng ký ngay
               </button>
-              <button className="border border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-artisan-gold-600 transition-colors duration-200">
+              <button
+                onClick={() => navigate("/about")}
+                className="border border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-artisan-gold-600 transition-colors duration-200"
+              >
                 Tìm hiểu thêm
               </button>
             </div>

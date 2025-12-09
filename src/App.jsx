@@ -31,6 +31,10 @@ import ArtistManagement from "./components/Admin/ArtistManagement";
 
 // import CartPage from "@/components/Cart/CartPage";
 import CartPage from "@/components/Cart/CartPage";
+import PaymentSuccess from "@/components/Payment/PaymentSuccess";
+
+// Forum components
+import { ForumLayout, ForumTopicDetail, ForumThreadDetail } from "./components/Forum";
 
 function MainLayout() {
   return (
@@ -76,6 +80,11 @@ function App() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              {/* Forum Routes */}
+              <Route path="/forum" element={<ForumLayout />} />
+              <Route path="/forum/topic/:topicId" element={<ForumTopicDetail />} />
+              <Route path="/forum/thread/:threadId" element={<ForumThreadDetail />} />
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />

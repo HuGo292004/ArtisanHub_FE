@@ -2,9 +2,11 @@ import { useState } from "react";
 import { login, getProfile } from "@/services/authService";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/Toast";
+import { useCart } from "@/contexts/CartContext";
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const { syncPendingCart } = useCart();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,6 +70,21 @@ export default function LoginForm() {
                 console.log("Normalized role:", userRole);
 
                 localStorage.setItem("user_role", userRole);
+
+                // Đồng bộ giỏ hàng từ localStorage (nếu có)
+                try {
+                  const syncResult = await syncPendingCart();
+                  if (
+                    syncResult.success &&
+                    syncResult.message !== "Không có sản phẩm chờ đồng bộ"
+                  ) {
+                    toast.success(syncResult.message);
+                  }
+                } catch (syncError) {
+                  console.error("Error syncing cart:", syncError);
+                  // Không block login nếu sync thất bại
+                }
+
                 setSuccessMsg("Đăng nhập thành công.");
                 toast.success("Đăng nhập thành công.");
 

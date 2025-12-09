@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ArtistHero from "./components/ArtistHero";
 import ArtistCard from "./components/ArtistCard";
-import { artistService } from "@/services/artistService";
+import { getAllArtists } from "@/services/artistService";
 
 export const ArtistLayout = () => {
   const [artists, setArtists] = useState([]);
@@ -50,7 +50,7 @@ export const ArtistLayout = () => {
       try {
         setLoading(true);
         // Gọi API thực tế để lấy danh sách nghệ nhân
-        const response = await artistService.getAllArtists();
+        const response = await getAllArtists();
         if (response && response.isSuccess && response.data.items) {
           setArtists(response.data.items);
           setFilteredArtists(response.data.items);

@@ -10,11 +10,13 @@ import {
   TrendingUp,
   Users,
   User,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getArtistProfile } from "@/services/authService";
+import { getArtistProfile } from "@/services/artistService";
 import PageLoader from "@/components/ui/PageLoader";
+import EditArtistProfileForm from "./EditArtistProfileForm";
 
 const MyStore = () => {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ const MyStore = () => {
   const [artistProfile, setArtistProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalSales: 0,
@@ -124,41 +127,63 @@ const MyStore = () => {
     >
       <div className="max-w-7xl mx-auto">
         {/* Store Info Header */}
-        <Card className="bg-artisan-brown-900 border-artisan-brown-700 p-6 mb-8">
-          <div className="flex items-center space-x-6">
-            <div className="w-20 h-20 rounded-full bg-artisan-brown-800 border-4 border-artisan-gold-500 overflow-hidden">
-              {artistProfile?.profileImage ? (
-                <img
-                  src={artistProfile.profileImage}
-                  alt={artistProfile.artistName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-artisan-gold-400" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white mb-1">
-                {artistProfile?.shopName || "Cửa hàng của tôi"}
-              </h1>
-              <p className="text-artisan-gold-400 font-medium mb-2">
-                {artistProfile?.artistName || "Nghệ nhân"}
-              </p>
-              <p className="text-artisan-brown-300 text-sm mb-2">
-                {artistProfile?.bio || "Chưa cập nhật thông tin cửa hàng"}
-              </p>
-              <div className="flex items-center space-x-4 text-sm text-artisan-brown-300">
-                <span>📍 {artistProfile?.location || "Chưa cập nhật"}</span>
-                <span>🎯 {artistProfile?.specialty || "Chưa cập nhật"}</span>
-                <span>
-                  ⏰ {artistProfile?.experienceYears || 0} năm kinh nghiệm
-                </span>
-              </div>
-            </div>
+        {showEditForm ? (
+          <div className="mb-8">
+            <EditArtistProfileForm
+              artistProfile={artistProfile}
+              onSuccess={() => {
+                setShowEditForm(false);
+                fetchArtistData(); // Refresh data
+              }}
+              onCancel={() => setShowEditForm(false)}
+            />
           </div>
-        </Card>
+        ) : (
+          <Card className="bg-artisan-brown-900 border-artisan-brown-700 p-6 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6 flex-1">
+                <div className="w-20 h-20 rounded-full bg-artisan-brown-800 border-4 border-artisan-gold-500 overflow-hidden">
+                  {artistProfile?.profileImage ? (
+                    <img
+                      src={artistProfile.profileImage}
+                      alt={artistProfile.artistName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-10 h-10 text-artisan-gold-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold text-white mb-1">
+                    {artistProfile?.shopName || "Cửa hàng của tôi"}
+                  </h1>
+                  <p className="text-artisan-gold-400 font-medium mb-2">
+                    {artistProfile?.artistName || "Nghệ nhân"}
+                  </p>
+                  <p className="text-artisan-brown-300 text-sm mb-2">
+                    {artistProfile?.bio || "Chưa cập nhật thông tin cửa hàng"}
+                  </p>
+                  <div className="flex items-center space-x-4 text-sm text-artisan-brown-300">
+                    <span>📍 {artistProfile?.location || "Chưa cập nhật"}</span>
+                    <span>🎯 {artistProfile?.specialty || "Chưa cập nhật"}</span>
+                    <span>
+                      ⏰ {artistProfile?.experienceYears || 0} năm kinh nghiệm
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowEditForm(true)}
+                className="bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white ml-4"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Chỉnh sửa cửa hàng
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

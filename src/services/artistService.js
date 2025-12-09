@@ -1,52 +1,36 @@
-import { axiosClient } from "./axiosClient";
+import axiosClient from "./axiosClient";
 
-export const artistService = {
-  // Lấy danh sách tất cả nghệ nhân
-  getAllArtists: async () => {
-    try {
-      // Thay đổi endpoint theo API thực tế của bạn
-      const response = await axiosClient.get("/api/artist-profiles");
-      return response;
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách nghệ nhân:", error);
-      throw error;
-    }
-  },
+// Đăng ký làm Artist (POST /api/artist-profiles)
+export function createArtistProfile(formData) {
+  return axiosClient.post("/api/artist-profiles", formData);
+}
 
-  // Lấy thông tin chi tiết một nghệ nhân và sản phẩm của họ
-  getArtistDetail: async (artistId) => {
-    try {
-      const response = await axiosClient.get(
-        `/api/my-products/artist/${artistId}/products`
-      );
-      return response;
-    } catch (error) {
-      console.error("Lỗi khi lấy chi tiết nghệ nhân:", error);
-      throw error;
-    }
-  },
+// Lấy thông tin artist profile của user hiện tại (GET /api/artist-profiles/me)
+export function getArtistProfile() {
+  return axiosClient.get("/api/artist-profiles/me");
+}
 
-  // Lấy thông tin chi tiết một nghệ nhân
-  getArtistById: async (artistId) => {
-    try {
-      const response = await axiosClient.get(`/artist-profiles/${artistId}`);
-      return response;
-    } catch (error) {
-      console.error("Lỗi khi lấy thông tin nghệ nhân:", error);
-      throw error;
-    }
-  },
+// Cập nhật artist profile (PUT /api/artist-profiles/me)
+export function updateArtistProfile(formData) {
+  return axiosClient.put("/api/artist-profiles/me", formData);
+}
 
-  // Tìm kiếm nghệ nhân theo tên hoặc chuyên môn
-  searchArtists: async (query) => {
-    try {
-      const response = await axiosClient.get(
-        `/artists/search?q=${encodeURIComponent(query)}`
-      );
-      return response;
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm nghệ nhân:", error);
-      throw error;
-    }
-  },
-};
+// Lấy danh sách tất cả nghệ nhân
+export function getAllArtists(params = {}) {
+  return axiosClient.get("/api/artist-profiles", { params });
+}
+
+// Lấy thông tin chi tiết một nghệ nhân và sản phẩm của họ
+export function getArtistDetail(artistId) {
+  return axiosClient.get(`/api/my-products/artist/${artistId}/products`);
+}
+
+// Lấy thông tin chi tiết một nghệ nhân
+export function getArtistById(artistId) {
+  return axiosClient.get(`/api/artist-profiles/${artistId}`);
+}
+
+// Tìm kiếm nghệ nhân theo tên hoặc chuyên môn
+export function searchArtists(query) {
+  return axiosClient.get(`/artists/search?q=${encodeURIComponent(query)}`);
+}
