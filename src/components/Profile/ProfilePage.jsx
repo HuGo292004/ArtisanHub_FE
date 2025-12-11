@@ -212,13 +212,13 @@ const ProfilePage = () => {
                       }}
                       className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                         activeTab === "store" && !showRegisterForm
-                          ? "bg-artisan-gold-500 text-white"
-                          : "text-artisan-brown-300 hover:text-white hover:bg-artisan-brown-800"
-                      }`}
-                    >
-                      <Store className="w-5 h-5 mr-3" />
-                      Cửa hàng của tôi
-                    </button>
+                        ? "bg-artisan-gold-500 text-white"
+                        : "text-artisan-brown-300 hover:text-white hover:bg-artisan-brown-800"
+                    }`}
+                  >
+                    <Store className="w-5 h-5 mr-3" />
+                    Cửa hàng của tôi
+                  </button>
                     <button
                       onClick={() => {
                         setActiveTab("shop-orders");
