@@ -68,7 +68,10 @@ export const cartService = {
       const response = await axiosClient.delete("/api/Carts/clear");
       return response;
     } catch (error) {
-      console.error("Lỗi khi xóa tất cả sản phẩm khỏi giỏ hàng:", error);
+      // Không log lỗi 400 - có thể giỏ hàng đã rỗng hoặc API không hỗ trợ
+      if (error?.status !== 400) {
+        console.error("Lỗi khi xóa tất cả sản phẩm khỏi giỏ hàng:", error);
+      }
       throw error;
     }
   },

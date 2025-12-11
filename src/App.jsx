@@ -20,6 +20,7 @@ import ProductDetail from "./components/Product/ProductDetail";
 import ProfilePage from "./components/Profile/ProfilePage";
 import EditProfilePage from "./components/Profile/components/EditProfilePage";
 import AddProductPage from "./components/Profile/components/AddProductPage";
+import EditProductPage from "./components/Profile/components/EditProductPage";
 
 // Admin components
 import AdminLayout from "./components/Admin/AdminLayout";
@@ -80,6 +81,7 @@ function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/profile/add-product" element={<AddProductPage />} />
+              <Route path="/profile/edit-product/:productId" element={<EditProductPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/cart" element={<CartPage />} />

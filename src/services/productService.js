@@ -66,8 +66,10 @@ export const productService = {
   },
 
   // Cập nhật sản phẩm (PUT /api/my-products/{productId})
+  // Body: FormData với các fields: CategoryId, Name, Description, Story, Price, DiscountPrice, StockQuantity, Weight, Images, Status
   updateProduct: async (productId, productData) => {
     try {
+      // Nếu productData là FormData thì gửi trực tiếp, không set Content-Type để axios tự set với boundary
       const response = await axiosClient.put(
         `/api/my-products/${productId}`,
         productData

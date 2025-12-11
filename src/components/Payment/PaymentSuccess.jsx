@@ -60,6 +60,23 @@ const PaymentSuccess = () => {
             console.log(
               `✓ Đã cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}`
             );
+            
+            // Nếu thanh toán thành công, gọi API tính hoa hồng
+            if (resultStatus === "success") {
+              try {
+                console.log(`Đang tính hoa hồng cho đơn hàng ${orderCode}...`);
+                const commissionResult = await orderService.calculateCommission(orderCode, "PAID");
+                console.log("Kết quả tính hoa hồng:", commissionResult);
+                
+                if (commissionResult?.isSuccess) {
+                  console.log(`✓ Đã tính hoa hồng cho đơn hàng ${orderCode}`);
+                } else {
+                  console.warn("API tính hoa hồng không thành công:", commissionResult);
+                }
+              } catch (commissionError) {
+                console.error("Lỗi khi tính hoa hồng:", commissionError);
+              }
+            }
           } else {
             console.warn(
               "API cập nhật trạng thái không thành công:",

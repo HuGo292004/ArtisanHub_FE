@@ -11,10 +11,14 @@ import {
   Users,
   User,
   Settings,
+  AlertTriangle,
+  X,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getArtistProfile } from "@/services/artistService";
+import { productService } from "@/services/productService";
 import PageLoader from "@/components/ui/PageLoader";
 import EditArtistProfileForm from "./EditArtistProfileForm";
 
@@ -31,6 +35,11 @@ const MyStore = () => {
     totalRevenue: 0,
     totalViews: 0,
   });
+
+  // Delete modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch artist profile and products
   const fetchArtistData = async () => {
@@ -99,12 +108,45 @@ const MyStore = () => {
 
   const handleEditProduct = (productId) => {
     // Navigate to edit product page
-    console.log("Edit product:", productId);
+    navigate(`/profile/edit-product/${productId}`);
   };
 
-  const handleDeleteProduct = (productId) => {
-    // Handle delete product
-    console.log("Delete product:", productId);
+  const handleDeleteProduct = (product) => {
+    // Show delete confirmation modal
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setDeleting(true);
+    try {
+      const response = await productService.deleteProduct(productToDelete.productId);
+      if (response?.isSuccess || response) {
+        // Remove product from local state
+        setProducts((prev) =>
+          prev.filter((p) => p.productId !== productToDelete.productId)
+        );
+        // Update stats
+        setStats((prev) => ({
+          ...prev,
+          totalProducts: prev.totalProducts - 1,
+        }));
+        setShowDeleteModal(false);
+        setProductToDelete(null);
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa sản phẩm:", error);
+      alert("Không thể xóa sản phẩm. Vui lòng thử lại.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const cancelDeleteProduct = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
   };
 
   const handleViewProduct = (productId) => {
@@ -365,7 +407,7 @@ const MyStore = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDeleteProduct(product.productId)}
+                          onClick={() => handleDeleteProduct(product)}
                           className="border-red-500 text-red-400 hover:bg-red-500 hover:text-white"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -379,6 +421,73 @@ const MyStore = () => {
           </div>
         </Card>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-artisan-brown-900 rounded-xl border border-artisan-brown-700 w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">
+                Xác nhận xóa sản phẩm
+              </h3>
+              <p className="text-artisan-brown-300 text-center mb-4">
+                Bạn có chắc chắn muốn xóa sản phẩm{" "}
+                <span className="text-artisan-gold-400 font-semibold">
+                  "{productToDelete.name}"
+                </span>
+                ? Hành động này không thể hoàn tác.
+              </p>
+
+              {/* Product Preview */}
+              <div className="flex items-center gap-4 p-3 bg-artisan-brown-800 rounded-lg mb-6">
+                <img
+                  src={productToDelete.images}
+                  alt={productToDelete.name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                  onError={(e) => {
+                    e.target.src = "/images/placeholder.jpg";
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-medium truncate">
+                    {productToDelete.name}
+                  </h4>
+                  <p className="text-artisan-gold-400 text-sm">
+                    {formatCurrency(productToDelete.discountPrice || productToDelete.price)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={cancelDeleteProduct}
+                  disabled={deleting}
+                  className="flex-1 border-artisan-brown-600 text-white hover:bg-artisan-brown-800"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Hủy
+                </Button>
+                <Button
+                  onClick={confirmDeleteProduct}
+                  disabled={deleting}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                >
+                  {deleting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  {deleting ? "Đang xóa..." : "Xóa sản phẩm"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLoader>
   );
 };

@@ -11,6 +11,8 @@ import {
   Edit,
   Camera,
   Store,
+  Package,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +20,8 @@ import { getProfile } from "@/services/authService";
 import { getArtistProfile } from "@/services/artistService";
 import MyStore from "./components/MyStore";
 import RegisterArtistForm from "./components/RegisterArtistForm";
+import ArtistOrdersContent from "./components/ArtistOrdersContent";
+import CustomerOrdersContent from "./components/CustomerOrdersContent";
 import PageLoader from "@/components/ui/PageLoader";
 
 const ProfilePage = () => {
@@ -182,21 +186,54 @@ const ProfilePage = () => {
                   <User className="w-5 h-5 mr-3" />
                   Thông tin cá nhân
                 </button>
-                {(user?.role === "Artist" || hasArtistProfile) && (
+                {/* Đơn hàng của tôi - Chỉ hiển thị cho Customer (không phải Artist) */}
+                {user?.role !== "Artist" && !hasArtistProfile && (
                   <button
                     onClick={() => {
-                      setActiveTab("store");
+                      setActiveTab("my-orders");
                       setShowRegisterForm(false);
                     }}
                     className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === "store" && !showRegisterForm
+                      activeTab === "my-orders" && !showRegisterForm
                         ? "bg-artisan-gold-500 text-white"
                         : "text-artisan-brown-300 hover:text-white hover:bg-artisan-brown-800"
                     }`}
                   >
-                    <Store className="w-5 h-5 mr-3" />
-                    Cửa hàng của tôi
+                    <ShoppingBag className="w-5 h-5 mr-3" />
+                    Đơn hàng của tôi
                   </button>
+                )}
+                {(user?.role === "Artist" || hasArtistProfile) && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setActiveTab("store");
+                        setShowRegisterForm(false);
+                      }}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                        activeTab === "store" && !showRegisterForm
+                          ? "bg-artisan-gold-500 text-white"
+                          : "text-artisan-brown-300 hover:text-white hover:bg-artisan-brown-800"
+                      }`}
+                    >
+                      <Store className="w-5 h-5 mr-3" />
+                      Cửa hàng của tôi
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab("shop-orders");
+                        setShowRegisterForm(false);
+                      }}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                        activeTab === "shop-orders" && !showRegisterForm
+                          ? "bg-artisan-gold-500 text-white"
+                          : "text-artisan-brown-300 hover:text-white hover:bg-artisan-brown-800"
+                      }`}
+                    >
+                      <Package className="w-5 h-5 mr-3" />
+                      Đơn hàng của Shop
+                    </button>
+                  </>
                 )}
                 {!hasArtistProfile && user?.role === "Customer" && (
                   <button
@@ -235,6 +272,10 @@ const ProfilePage = () => {
             <div className="flex-1 bg-artisan-brown-950">
               {activeTab === "store" ? (
                 <MyStore />
+              ) : activeTab === "shop-orders" ? (
+                <ArtistOrdersContent />
+              ) : activeTab === "my-orders" ? (
+                <CustomerOrdersContent />
               ) : (
                 <div className="container mx-auto px-4 py-8">
                   <div className="max-w-4xl mx-auto">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,7 @@ const CartPage = () => {
     const checkRecentPayment = async () => {
       const lastPaidOrder = localStorage.getItem("last_paid_order");
       const paymentTime = localStorage.getItem("payment_success_time");
-      
+
       if (lastPaidOrder && paymentTime) {
         const timeDiff = Date.now() - parseInt(paymentTime);
         // Nếu thanh toán trong vòng 2 phút gần đây
@@ -48,7 +48,7 @@ const CartPage = () => {
         }
       }
     };
-    
+
     checkRecentPayment();
   }, [loadCartItems]);
 
@@ -243,7 +243,11 @@ const CartPage = () => {
                                   item.quantity - 1
                                 )
                               }
-                              disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                              disabled={
+                                updatingItems[
+                                  item.cartItemId || item.id || item.productId
+                                ]
+                              }
                               className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700 disabled:opacity-50"
                             >
                               <Minus className="w-4 h-4" />
@@ -260,7 +264,11 @@ const CartPage = () => {
                                   item.quantity + 1
                                 )
                               }
-                              disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                              disabled={
+                                updatingItems[
+                                  item.cartItemId || item.id || item.productId
+                                ]
+                              }
                               className="w-8 h-8 p-0 border-artisan-brown-600 text-white hover:bg-artisan-brown-700 disabled:opacity-50"
                             >
                               <Plus className="w-4 h-4" />
@@ -283,7 +291,11 @@ const CartPage = () => {
                                 item.cartItemId || item.id || item.productId
                               )
                             }
-                            disabled={updatingItems[item.cartItemId || item.id || item.productId]}
+                            disabled={
+                              updatingItems[
+                                item.cartItemId || item.id || item.productId
+                              ]
+                            }
                             className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 disabled:opacity-50"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -314,6 +326,9 @@ const CartPage = () => {
                       <span className="text-artisan-gold-400">
                         {formatPrice(getTotalPrice())}đ
                       </span>
+                    </div>
+                    <div className="flex justify-between text-white text-lg font-bold">
+                      <span>Đơn hàng sẽ bao gồm phí vận chuyển</span>
                     </div>
                   </div>
 

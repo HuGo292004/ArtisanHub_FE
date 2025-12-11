@@ -34,3 +34,24 @@ export function getArtistById(artistId) {
 export function searchArtists(query) {
   return axiosClient.get(`/artists/search?q=${encodeURIComponent(query)}`);
 }
+
+// Lấy danh sách đơn hàng của artist (GET /api/artist-profiles/my-orders)
+export function getArtistOrders(params = {}) {
+  const { page = 1, size = 10, searchTerm = "", status = "" } = params;
+  return axiosClient.get("/api/artist-profiles/my-orders", {
+    params: { page, size, searchTerm, status },
+  });
+}
+
+// Lấy chi tiết đơn hàng của artist (GET /api/artist-profiles/orders/{orderId})
+export function getArtistOrderDetail(orderId) {
+  return axiosClient.get(`/api/artist-profiles/orders/${orderId}`);
+}
+
+// Cập nhật trạng thái đơn hàng của artist (PUT /api/artist-profiles/orders/{orderId}/status)
+// Body: { newStatus: "Processing" | "Shipped" | "Delivered" }
+export function updateArtistOrderStatus(orderId, newStatus) {
+  return axiosClient.put(`/api/artist-profiles/orders/${orderId}/status`, {
+    newStatus: newStatus,
+  });
+}
