@@ -32,6 +32,7 @@ import ArtistManagement from "./components/Admin/ArtistManagement";
 // import CartPage from "@/components/Cart/CartPage";
 import CartPage from "@/components/Cart/CartPage";
 import PaymentSuccess from "@/components/Payment/PaymentSuccess";
+import PaymentCallback from "@/components/Payment/PaymentCallback";
 
 // Forum components
 import { ForumLayout, ForumTopicDetail, ForumThreadDetail } from "./components/Forum";
@@ -49,6 +50,8 @@ function MainLayout() {
 function HomePage() {
   return (
     <main>
+      {/* PaymentCallback xử lý redirect từ PayOS khi thanh toán xong */}
+      <PaymentCallback />
       <Hero />
       <Features />
       <Artisans />
