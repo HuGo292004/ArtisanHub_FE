@@ -7,10 +7,16 @@ import { useCart } from "@/contexts/CartContext";
 import { cartService } from "@/services/cartService";
 import { orderService } from "@/services/orderService";
 
-const PaymentSuccess = () => {
+/**
+ * Component xử lý callback từ PayOS khi thanh toán xong
+ * PayOS sẽ redirect về URL với các params:
+ * - Thành công: ?code=00&id=...&cancel=false&status=PAID&orderCode=...
+ * - Thất bại: ?code=...&id=...&cancel=true&status=CANCELLED&orderCode=...
+ */
+const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { clearCart, loadCartItems } = useCart();
+  const { loadCartItems } = useCart();
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
 
@@ -22,6 +28,12 @@ const PaymentSuccess = () => {
       const orderCode = searchParams.get("orderCode");
       const cancel = searchParams.get("cancel");
 
+      // Nếu không có orderCode, không phải payment callback
+      if (!orderCode) {
+        setLoading(false);
+        return;
+      }
+
       // Determine payment status
       // Ưu tiên kiểm tra cancel trước vì có thể có code=00 nhưng cancel=true
       let resultStatus = "pending";
@@ -32,8 +44,8 @@ const PaymentSuccess = () => {
       } else {
         resultStatus = "failed";
       }
-
-      console.log("Payment params:", { code, status, orderCode, cancel });
+      
+      console.log("Payment callback params:", { code, status, orderCode, cancel });
       console.log("Determined payment status:", resultStatus);
 
       setPaymentStatus({
@@ -43,44 +55,30 @@ const PaymentSuccess = () => {
       });
 
       // Gọi API cập nhật trạng thái đơn hàng
-      if (orderCode) {
-        try {
-          const newStatus = resultStatus === "success" ? "PAID" : "CANCELLED";
-          console.log(
-            `Đang cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}...`
-          );
-
-          const updateResult = await orderService.updateOrderStatus(
-            orderCode,
-            newStatus
-          );
-          console.log("Kết quả cập nhật trạng thái:", updateResult);
-
-          if (updateResult?.isSuccess) {
-            console.log(
-              `✓ Đã cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}`
-            );
-          } else {
-            console.warn(
-              "API cập nhật trạng thái không thành công:",
-              updateResult
-            );
-          }
-        } catch (statusError) {
-          console.error("Lỗi khi cập nhật trạng thái đơn hàng:", statusError);
-          // Không throw error vì vẫn muốn hiển thị kết quả thanh toán cho user
+      try {
+        const newStatus = resultStatus === "success" ? "PAID" : "CANCELLED";
+        console.log(`Đang cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}...`);
+        
+        const updateResult = await orderService.updateOrderStatus(orderCode, newStatus);
+        console.log("Kết quả cập nhật trạng thái:", updateResult);
+        
+        if (updateResult?.isSuccess) {
+          console.log(`✓ Đã cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}`);
+        } else {
+          console.warn("API cập nhật trạng thái không thành công:", updateResult);
         }
+      } catch (statusError) {
+        console.error("Lỗi khi cập nhật trạng thái đơn hàng:", statusError);
       }
 
       // Xóa giỏ hàng nếu thanh toán thành công
       if (resultStatus === "success") {
-        // Lưu orderCode vào localStorage để tracking
         localStorage.setItem("last_paid_order", orderCode);
         localStorage.setItem("payment_success_time", Date.now().toString());
+        
         try {
           console.log("Bắt đầu xóa giỏ hàng sau thanh toán thành công...");
 
-          // Phương pháp 1: Thử gọi API clear
           try {
             const clearResult = await cartService.clearCart();
             console.log("Clear cart API result:", clearResult);
@@ -88,18 +86,12 @@ const PaymentSuccess = () => {
             if (clearResult && clearResult.isSuccess) {
               console.log("✓ Đã xóa giỏ hàng thành công qua API clear");
             } else {
-              throw new Error(
-                "API clear không thành công, dùng phương pháp backup"
-              );
+              throw new Error("API clear không thành công");
             }
           } catch (clearError) {
             console.warn("API clear thất bại, xóa từng item một:", clearError);
 
-            // Phương pháp 2: Backup - Xóa từng item một
-            // Reload cart items trước để có danh sách mới nhất
             await loadCartItems(false);
-
-            // Lấy danh sách cart items hiện tại
             const currentCartResponse = await cartService.getCartItems();
             let itemsToDelete = [];
 
@@ -113,9 +105,6 @@ const PaymentSuccess = () => {
               itemsToDelete = currentCartResponse;
             }
 
-            console.log(`Tìm thấy ${itemsToDelete.length} items cần xóa`);
-
-            // Xóa từng item
             for (const item of itemsToDelete) {
               try {
                 const itemId = item.cartItemId || item.id;
@@ -129,16 +118,11 @@ const PaymentSuccess = () => {
             }
           }
 
-          // Reload cart để cập nhật UI
           await loadCartItems(false);
-
-          // Xóa pending cart trong localStorage
           localStorage.removeItem("pending_cart_items");
-
           console.log("✓ Giỏ hàng đã được xóa hoàn toàn");
         } catch (error) {
           console.error("Lỗi khi xóa giỏ hàng:", error);
-          // Vẫn reload cart để đảm bảo UI được cập nhật
           try {
             await loadCartItems(false);
           } catch (reloadError) {
@@ -152,6 +136,7 @@ const PaymentSuccess = () => {
       // Auto redirect sau 5 giây nếu thành công
       if (resultStatus === "success") {
         const timer = setTimeout(() => {
+          // Clear URL params và về trang chủ
           navigate("/", { replace: true });
         }, 5000);
         return () => clearTimeout(timer);
@@ -159,16 +144,19 @@ const PaymentSuccess = () => {
     };
 
     handlePaymentResult();
-  }, [searchParams, navigate, clearCart, loadCartItems]);
+  }, [searchParams, navigate, loadCartItems]);
+
+  // Nếu không có orderCode trong URL, không hiển thị gì
+  if (!searchParams.get("orderCode")) {
+    return null;
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className="text-center">
           <Loader2 className="w-16 h-16 text-artisan-gold-400 animate-spin mx-auto mb-4" />
-          <p className="text-artisan-brown-300 text-lg">
-            Đang xử lý thanh toán...
-          </p>
+          <p className="text-white text-lg">Đang xử lý thanh toán...</p>
         </div>
       </div>
     );
@@ -199,7 +187,7 @@ const PaymentSuccess = () => {
                 ✓ Chúng tôi sẽ liên hệ với bạn sớm nhất
               </p>
               <p className="text-artisan-brown-300 text-sm">
-                ✓ Tự động chuyển về trang chủ sau 5 giây...
+                ✓ Tự động đóng sau 5 giây...
               </p>
             </div>
           </div>
@@ -215,6 +203,11 @@ const PaymentSuccess = () => {
             <p className="text-artisan-brown-300 mb-6">
               Bạn đã hủy giao dịch thanh toán
             </p>
+            {paymentStatus.orderCode && (
+              <p className="text-artisan-brown-400 font-mono text-sm mb-4">
+                Mã đơn hàng: {paymentStatus.orderCode}
+              </p>
+            )}
           </div>
         );
 
@@ -247,7 +240,7 @@ const PaymentSuccess = () => {
   };
 
   return (
-    <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <Card className="w-full max-w-2xl bg-artisan-brown-900 border-artisan-brown-700">
         <CardContent className="pt-12 pb-8 px-8">
           {renderContent()}
@@ -258,7 +251,7 @@ const PaymentSuccess = () => {
               className="bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
             >
               <Home className="w-4 h-4 mr-2" />
-              Về trang chủ
+              Đóng
             </Button>
             <Button
               onClick={() => navigate("/products", { replace: true })}
@@ -275,4 +268,5 @@ const PaymentSuccess = () => {
   );
 };
 
-export default PaymentSuccess;
+export default PaymentCallback;
+

@@ -11,6 +11,27 @@ export const orderService = {
       throw error;
     }
   },
+
+  // Cập nhật trạng thái đơn hàng
+  // PUT /api/Order/status?orderCode={orderCode}
+  // Body: "PAID" hoặc "CANCELLED"
+  updateOrderStatus: async (orderCode, status) => {
+    try {
+      const response = await axiosClient.put(
+        `/api/Order/status?orderCode=${orderCode}`,
+        JSON.stringify(status),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái đơn hàng:", error);
+      throw error;
+    }
+  },
 };
 
 export default orderService;
