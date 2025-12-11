@@ -20,13 +20,73 @@ import {
   Truck,
   CreditCard,
   Wallet,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import adminService from "@/services/adminService";
 
+// Các preset filter thời gian
+const TIME_FILTERS = [
+  { key: "today", label: "Hôm nay" },
+  { key: "yesterday", label: "Hôm qua" },
+  { key: "this_week", label: "Tuần này" },
+  { key: "this_month", label: "Tháng này" },
+  { key: "last_month", label: "Tháng trước" },
+  { key: "this_year", label: "Năm nay" },
+  { key: "custom", label: "Tùy chọn" },
+];
+
+// Helper function để tính date range
+const getDateRange = (filterKey) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  switch (filterKey) {
+    case "today":
+      return {
+        fromDate: today.toISOString(),
+        toDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString(),
+      };
+    case "yesterday":
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      return {
+        fromDate: yesterday.toISOString(),
+        toDate: new Date(today.getTime() - 1).toISOString(),
+      };
+    case "this_week":
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+      return {
+        fromDate: startOfWeek.toISOString(),
+        toDate: now.toISOString(),
+      };
+    case "this_month":
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return {
+        fromDate: startOfMonth.toISOString(),
+        toDate: now.toISOString(),
+      };
+    case "last_month":
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      return {
+        fromDate: startOfLastMonth.toISOString(),
+        toDate: endOfLastMonth.toISOString(),
+      };
+    case "this_year":
+    default:
+      return {
+        fromDate: `${now.getFullYear()}-01-01T00:00:00Z`,
+        toDate: `${now.getFullYear()}-12-31T23:59:59Z`,
+      };
+  }
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
+  // Stats Cards - Luôn hiển thị dữ liệu toàn bộ (năm nay), không bị filter
   const [orderStats, setOrderStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -43,6 +103,17 @@ export default function AdminDashboard() {
     unpaidCommissions: 0,
   });
 
+  // Chart Stats - Dữ liệu cho biểu đồ, thay đổi theo filter
+  const [chartStats, setChartStats] = useState({
+    totalOrders: 0,
+    pendingOrders: 0,
+    paidOrders: 0,
+    processingOrders: 0,
+    shippingOrders: 0,
+    deliveredOrders: 0,
+    cancelledOrders: 0,
+  });
+
   // Doanh thu thực từ đơn đã thanh toán (từ dashboard-statistics API)
   const [actualRevenue, setActualRevenue] = useState(0);
 
@@ -51,14 +122,33 @@ export default function AdminDashboard() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(false); // Loading riêng cho biểu đồ
   const [error, setError] = useState(null);
 
+  // Filter states (chỉ cho biểu đồ)
+  const [timeFilter, setTimeFilter] = useState("this_year");
+  const [customFromDate, setCustomFromDate] = useState("");
+  const [customToDate, setCustomToDate] = useState("");
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+
+  const parseProductImage = (images) => {
+    if (!images) return "/images/placeholder.jpg";
+    if (typeof images === "string" && images.startsWith("{")) {
+      const parsed = images.slice(1, -1).split(",")[0];
+      return parsed.replace(/"/g, "") || "/images/placeholder.jpg";
+    }
+    if (typeof images === "string") return images;
+    if (Array.isArray(images) && images.length > 0) return images[0];
+    return "/images/placeholder.jpg";
+  };
+
+  // Fetch dữ liệu chính cho Dashboard (Stats Cards, sản phẩm, đơn hàng gần đây) - chỉ gọi 1 lần
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Tạo date range cho order statistics (từ đầu năm đến cuối năm)
+      // Date range mặc định cho Stats Cards (cả năm)
       const currentYear = new Date().getFullYear();
       const fromDate = `${currentYear}-01-01T00:00:00Z`;
       const toDate = `${currentYear}-12-31T23:59:59Z`;
@@ -69,7 +159,7 @@ export default function AdminDashboard() {
         artistsResponse,
         ordersResponse,
         allOrdersResponse,
-        orderStatsResponse, // Thống kê đơn hàng
+        orderStatsResponse,
       ] = await Promise.allSettled([
         adminService.getDashboardStatistics(),
         adminService.getAllProducts({ page: 1, size: 10 }),
@@ -79,39 +169,18 @@ export default function AdminDashboard() {
         adminService.getOrderStatistics({ fromDate, toDate }),
       ]);
 
-      // Debug log để kiểm tra response
-      console.log("=== Dashboard API Responses ===");
-      console.log("1. Dashboard Statistics:", dashboardResponse);
-      console.log("2. Products:", productsResponse);
-      console.log("3. Artists:", artistsResponse);
-      console.log("4. Orders:", ordersResponse);
-      console.log("5. All Orders:", allOrdersResponse);
-      console.log("6. Order Stats:", orderStatsResponse);
-
       // Xử lý dashboard statistics response
-      let dashboardRevenue = 0; // Doanh thu từ đơn đã thanh toán
+      let dashboardRevenue = 0;
       let bestSelling = [];
       let revTrend = [];
 
       if (dashboardResponse.status === "fulfilled" && dashboardResponse.value) {
         const dashRes = dashboardResponse.value;
-        console.log("Dashboard Data:", dashRes);
-
-        // API /api/admin/dashboard-statistics trả về trực tiếp object (không wrap trong isSuccess)
-        // Ví dụ: { totalRevenue: 36000, totalPlatformCommission: 24700, bestSellingProducts: [...], revenueTrend: [...] }
         dashboardRevenue = dashRes.totalRevenue || 0;
         bestSelling = dashRes.bestSellingProducts || [];
         revTrend = dashRes.revenueTrend || [];
-
-        console.log(
-          "Parsed Dashboard - Revenue (đã thanh toán):",
-          dashboardRevenue
-        );
-        console.log("Parsed Dashboard - Best Selling:", bestSelling);
-        console.log("Parsed Dashboard - Revenue Trend:", revTrend);
       }
 
-      // Lưu doanh thu thực từ đơn đã thanh toán
       setActualRevenue(dashboardRevenue);
 
       // Xử lý products response
@@ -151,24 +220,7 @@ export default function AdminDashboard() {
         }
       }
 
-      // Xử lý allOrdersResponse để đếm số đơn chờ thanh toán chính xác
-      let waitingForPaymentCount = 0;
-      if (allOrdersResponse.status === "fulfilled" && allOrdersResponse.value) {
-        const allOrderRes = allOrdersResponse.value;
-        if (allOrderRes.isSuccess && allOrderRes.data) {
-          const allItems = allOrderRes.data.items || [];
-          waitingForPaymentCount = allItems.filter((o) =>
-            o.status?.toLowerCase().includes("waiting")
-          ).length;
-          console.log(
-            "Đơn 'Waiting for payment' từ danh sách:",
-            waitingForPaymentCount
-          );
-          console.log("Tổng đơn trong danh sách:", allOrderRes.data.total);
-        }
-      }
-
-      // Xử lý order statistics response
+      // Xử lý order statistics response - cho Stats Cards (luôn lấy cả năm)
       let orderStatsData = {
         totalOrders: 0,
         pendingOrders: 0,
@@ -177,7 +229,6 @@ export default function AdminDashboard() {
         shippingOrders: 0,
         deliveredOrders: 0,
         cancelledOrders: 0,
-        waitingForPayment: 0, // Thêm trường này
         totalRevenue: 0,
         totalPlatformCommission: 0,
         totalArtistEarnings: 0,
@@ -185,15 +236,10 @@ export default function AdminDashboard() {
         paidCommissions: 0,
         unpaidCommissions: 0,
       };
-      if (
-        orderStatsResponse.status === "fulfilled" &&
-        orderStatsResponse.value
-      ) {
-        const statsRes = orderStatsResponse.value;
-        console.log("Order Stats Raw Response:", statsRes);
 
+      if (orderStatsResponse.status === "fulfilled" && orderStatsResponse.value) {
+        const statsRes = orderStatsResponse.value;
         if (statsRes.isSuccess && statsRes.data) {
-          console.log("Order Stats Data:", statsRes.data);
           orderStatsData = {
             totalOrders: statsRes.data.totalOrders || 0,
             pendingOrders: statsRes.data.pendingOrders || 0,
@@ -209,18 +255,20 @@ export default function AdminDashboard() {
             paidCommissions: statsRes.data.paidCommissions || 0,
             unpaidCommissions: statsRes.data.unpaidCommissions || 0,
           };
-          console.log("Parsed Order Stats:", orderStatsData);
-        } else {
-          console.warn(
-            "Order Stats response không có isSuccess hoặc data:",
-            statsRes
-          );
         }
-      } else {
-        console.warn("Order Stats API failed:", orderStatsResponse);
       }
 
       setOrderStats(orderStatsData);
+      // Khởi tạo chartStats với dữ liệu ban đầu (cả năm)
+      setChartStats({
+        totalOrders: orderStatsData.totalOrders,
+        pendingOrders: orderStatsData.pendingOrders,
+        paidOrders: orderStatsData.paidOrders,
+        processingOrders: orderStatsData.processingOrders,
+        shippingOrders: orderStatsData.shippingOrders,
+        deliveredOrders: orderStatsData.deliveredOrders,
+        cancelledOrders: orderStatsData.cancelledOrders,
+      });
 
       setBestSellingProducts(bestSelling);
       setRevenueTrend(revTrend);
@@ -234,20 +282,187 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  const parseProductImage = (images) => {
-    if (!images) return "/images/placeholder.jpg";
-    if (typeof images === "string" && images.startsWith("{")) {
-      const parsed = images.slice(1, -1).split(",")[0];
-      return parsed.replace(/"/g, "") || "/images/placeholder.jpg";
+  // Fetch dữ liệu CHỈ cho biểu đồ (khi filter thay đổi)
+  const fetchChartData = useCallback(async (filterKey, customFrom = null, customTo = null) => {
+    try {
+      setChartLoading(true);
+
+      // Tính date range dựa trên filter
+      let fromDate, toDate;
+      if (filterKey === "custom" && customFrom && customTo) {
+        fromDate = new Date(customFrom).toISOString();
+        toDate = new Date(customTo + "T23:59:59").toISOString();
+      } else {
+        const dateRange = getDateRange(filterKey);
+        fromDate = dateRange.fromDate;
+        toDate = dateRange.toDate;
+      }
+
+      const response = await adminService.getOrderStatistics({ fromDate, toDate });
+
+      if (response?.isSuccess && response?.data) {
+        setChartStats({
+          totalOrders: response.data.totalOrders || 0,
+          pendingOrders: response.data.pendingOrders || 0,
+          paidOrders: response.data.paidOrders || 0,
+          processingOrders: response.data.processingOrders || 0,
+          shippingOrders: response.data.shippingOrders || 0,
+          deliveredOrders: response.data.deliveredOrders || 0,
+          cancelledOrders: response.data.cancelledOrders || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu biểu đồ:", err);
+    } finally {
+      setChartLoading(false);
     }
-    if (typeof images === "string") return images;
-    if (Array.isArray(images) && images.length > 0) return images[0];
-    return "/images/placeholder.jpg";
-  };
+  }, []);
+
+  // Fetch tất cả dữ liệu theo filter (cho filter tổng)
+  const fetchAllDataWithFilter = useCallback(async (filterKey, customFrom = null, customTo = null) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Tính date range dựa trên filter
+      let fromDate, toDate;
+      if (filterKey === "custom" && customFrom && customTo) {
+        fromDate = new Date(customFrom).toISOString();
+        toDate = new Date(customTo + "T23:59:59").toISOString();
+      } else {
+        const dateRange = getDateRange(filterKey);
+        fromDate = dateRange.fromDate;
+        toDate = dateRange.toDate;
+      }
+
+      const [
+        dashboardResponse,
+        productsResponse,
+        ordersResponse,
+        orderStatsResponse,
+      ] = await Promise.allSettled([
+        adminService.getDashboardStatistics(),
+        adminService.getAllProducts({ page: 1, size: 10 }),
+        adminService.getAllOrders({ page: 1, size: 5 }),
+        adminService.getOrderStatistics({ fromDate, toDate }),
+      ]);
+
+      // Xử lý dashboard statistics
+      if (dashboardResponse.status === "fulfilled" && dashboardResponse.value) {
+        const dashRes = dashboardResponse.value;
+        setActualRevenue(dashRes.totalRevenue || 0);
+        setBestSellingProducts(dashRes.bestSellingProducts || []);
+        setRevenueTrend(dashRes.revenueTrend || []);
+      }
+
+      // Xử lý products
+      if (productsResponse.status === "fulfilled" && productsResponse.value) {
+        const prodRes = productsResponse.value;
+        if (prodRes.isSuccess && prodRes.data) {
+          setRecentProducts((prodRes.data.items || []).slice(0, 5).map((item) => ({
+            id: item.productId,
+            name: item.name,
+            category: item.categoryName,
+            price: item.price,
+            image: parseProductImage(item.images),
+            artist: item.artistName,
+          })));
+        }
+      }
+
+      // Xử lý orders
+      if (ordersResponse.status === "fulfilled" && ordersResponse.value) {
+        const orderRes = ordersResponse.value;
+        if (orderRes.isSuccess && orderRes.data) {
+          setRecentOrders((orderRes.data.items || []).slice(0, 5).map((order) => ({
+            id: order.orderId,
+            orderCode: order.orderCode,
+            customer: order.accountUsername || "N/A",
+            amount: order.totalAmount || 0,
+            status: order.status || "pending",
+            date: order.orderDate ? new Date(order.orderDate).toLocaleDateString("vi-VN") : "N/A",
+          })));
+        }
+      }
+
+      // Xử lý order statistics - cập nhật cả Stats Cards và Chart
+      if (orderStatsResponse.status === "fulfilled" && orderStatsResponse.value) {
+        const statsRes = orderStatsResponse.value;
+        if (statsRes.isSuccess && statsRes.data) {
+          const statsData = {
+            totalOrders: statsRes.data.totalOrders || 0,
+            pendingOrders: statsRes.data.pendingOrders || 0,
+            paidOrders: statsRes.data.paidOrders || 0,
+            processingOrders: statsRes.data.processingOrders || 0,
+            shippingOrders: statsRes.data.shippingOrders || 0,
+            deliveredOrders: statsRes.data.deliveredOrders || 0,
+            cancelledOrders: statsRes.data.cancelledOrders || 0,
+            totalRevenue: statsRes.data.totalRevenue || 0,
+            totalPlatformCommission: statsRes.data.totalPlatformCommission || 0,
+            totalArtistEarnings: statsRes.data.totalArtistEarnings || 0,
+            totalShippingFees: statsRes.data.totalShippingFees || 0,
+            paidCommissions: statsRes.data.paidCommissions || 0,
+            unpaidCommissions: statsRes.data.unpaidCommissions || 0,
+          };
+          setOrderStats(statsData);
+          setChartStats({
+            totalOrders: statsData.totalOrders,
+            pendingOrders: statsData.pendingOrders,
+            paidOrders: statsData.paidOrders,
+            processingOrders: statsData.processingOrders,
+            shippingOrders: statsData.shippingOrders,
+            deliveredOrders: statsData.deliveredOrders,
+            cancelledOrders: statsData.cancelledOrders,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu:", err);
+      setError(err.message || "Không thể tải dữ liệu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Handle filter change cho FILTER TỔNG - ảnh hưởng tất cả
+  const handleGlobalFilterChange = (filterKey) => {
+    setTimeFilter(filterKey);
+    if (filterKey === "custom") {
+      setShowCustomDatePicker(true);
+    } else {
+      setShowCustomDatePicker(false);
+      fetchAllDataWithFilter(filterKey);
+    }
+  };
+
+  // Handle custom date filter cho FILTER TỔNG
+  const handleGlobalCustomDateFilter = () => {
+    if (customFromDate && customToDate) {
+      fetchAllDataWithFilter("custom", customFromDate, customToDate);
+    }
+  };
+
+  // Handle filter change - CHỈ ảnh hưởng biểu đồ
+  const handleFilterChange = (filterKey) => {
+    setTimeFilter(filterKey);
+    if (filterKey === "custom") {
+      setShowCustomDatePicker(true);
+    } else {
+      setShowCustomDatePicker(false);
+      fetchChartData(filterKey);
+    }
+  };
+
+  // Handle custom date filter
+  const handleCustomDateFilter = () => {
+    if (customFromDate && customToDate) {
+      fetchChartData("custom", customFromDate, customToDate);
+    }
+  };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -284,7 +499,7 @@ export default function AdminDashboard() {
 
   // Loading state
   if (loading) {
-    return (
+  return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
           <div className="relative">
@@ -380,17 +595,94 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold mb-2">Tổng Quan Hệ Thống</h1>
             <p className="text-amber-100 text-lg">
-              Chào mừng bạn đến với bảng điều khiển quản lý ArtisanHub
-            </p>
+          Chào mừng bạn đến với bảng điều khiển quản lý ArtisanHub
+        </p>
           </div>
           <Button
-            onClick={fetchDashboardData}
+            onClick={() => fetchDashboardData()}
             variant="secondary"
             className="bg-white/20 hover:bg-white/30 text-white border-0"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Làm mới
           </Button>
+        </div>
+      </div>
+
+      {/* Global Time Filter */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-slate-700">
+            <Calendar className="w-5 h-5 text-amber-500" />
+            <span className="font-semibold">Lọc theo thời gian:</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {TIME_FILTERS.filter(f => f.key !== "custom").map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => handleGlobalFilterChange(filter.key)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  timeFilter === filter.key
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-200"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                setTimeFilter("custom");
+                setShowCustomDatePicker(true);
+              }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                timeFilter === "custom"
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-200"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Tùy chọn
+            </button>
+          </div>
+
+          {/* Custom Date Picker */}
+          {showCustomDatePicker && (
+            <div className="flex items-center gap-3 ml-auto">
+              <input
+                type="date"
+                value={customFromDate}
+                onChange={(e) => setCustomFromDate(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              />
+              <span className="text-slate-500">đến</span>
+              <input
+                type="date"
+                value={customToDate}
+                onChange={(e) => setCustomToDate(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              />
+              <Button
+                onClick={handleGlobalCustomDateFilter}
+                disabled={!customFromDate || !customToDate}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-200"
+              >
+                Áp dụng
+              </Button>
+            </div>
+          )}
+        </div>
+        
+        {/* Current filter info */}
+        <div className="mt-3 flex items-center gap-2 text-sm">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-500">Đang xem:</span>
+          <span className="font-semibold text-amber-600">
+            {TIME_FILTERS.find(f => f.key === timeFilter)?.label}
+            {timeFilter === "custom" && customFromDate && customToDate && (
+              <span className="text-slate-500 font-normal"> ({customFromDate} → {customToDate})</span>
+            )}
+          </span>
         </div>
       </div>
 
@@ -442,30 +734,36 @@ export default function AdminDashboard() {
         {/* Order Status Pie Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-purple-50">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-violet-400 to-purple-500 rounded-xl shadow-lg shadow-violet-200">
                   <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-                <div>
+            <div>
                   <h2 className="text-xl font-bold text-slate-800">
                     📊 Thống Kê Đơn Hàng
                   </h2>
                   <p className="text-sm text-slate-500">
-                    Phân bổ trạng thái đơn hàng năm {new Date().getFullYear()}
+                    Phân bổ trạng thái đơn hàng - {TIME_FILTERS.find(f => f.key === timeFilter)?.label}
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-violet-600">
-                  {orderStats.totalOrders.toLocaleString()}
+                  {chartStats.totalOrders.toLocaleString()}
                 </p>
                 <p className="text-xs text-slate-500">Tổng đơn hàng</p>
               </div>
             </div>
           </div>
-          <div className="p-6">
-            {orderStats.totalOrders > 0 ? (
+          <div className="p-6 relative">
+            {/* Loading overlay cho biểu đồ */}
+            {chartLoading && (
+              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
+                <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+              </div>
+            )}
+            {chartStats.totalOrders > 0 ? (
               <div className="space-y-4">
                 {/* Donut Chart Visual */}
                 <div className="flex items-center justify-center mb-6">
@@ -476,35 +774,35 @@ export default function AdminDashboard() {
                       viewBox="0 0 100 100"
                     >
                       {(() => {
-                        const total = orderStats.totalOrders || 1;
+                        const total = chartStats.totalOrders || 1;
                         const segments = [
                           {
-                            value: orderStats.pendingOrders,
+                            value: chartStats.pendingOrders,
                             color: "#f59e0b",
                             label: "Chờ xử lý",
                           },
                           {
-                            value: orderStats.paidOrders,
+                            value: chartStats.paidOrders,
                             color: "#10b981",
                             label: "Đã thanh toán",
                           },
                           {
-                            value: orderStats.processingOrders,
+                            value: chartStats.processingOrders,
                             color: "#3b82f6",
                             label: "Đang xử lý",
                           },
                           {
-                            value: orderStats.shippingOrders,
+                            value: chartStats.shippingOrders,
                             color: "#8b5cf6",
                             label: "Đang giao",
                           },
                           {
-                            value: orderStats.deliveredOrders,
+                            value: chartStats.deliveredOrders,
                             color: "#06b6d4",
                             label: "Đã giao",
                           },
                           {
-                            value: orderStats.cancelledOrders,
+                            value: chartStats.cancelledOrders,
                             color: "#ef4444",
                             label: "Đã hủy",
                           },
@@ -545,7 +843,7 @@ export default function AdminDashboard() {
                     {/* Center text */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-3xl font-bold text-slate-800">
-                        {orderStats.totalOrders}
+                        {chartStats.totalOrders}
                       </span>
                       <span className="text-xs text-slate-500">đơn hàng</span>
                     </div>
@@ -557,37 +855,37 @@ export default function AdminDashboard() {
                   {[
                     {
                       label: "Chờ xử lý",
-                      value: orderStats.pendingOrders,
+                      value: chartStats.pendingOrders,
                       color: "bg-amber-500",
                       icon: Clock,
                     },
                     {
                       label: "Đã thanh toán",
-                      value: orderStats.paidOrders,
+                      value: chartStats.paidOrders,
                       color: "bg-emerald-500",
                       icon: CheckCircle,
                     },
                     {
                       label: "Đang xử lý",
-                      value: orderStats.processingOrders,
+                      value: chartStats.processingOrders,
                       color: "bg-blue-500",
                       icon: Package,
                     },
                     {
                       label: "Đang giao",
-                      value: orderStats.shippingOrders,
+                      value: chartStats.shippingOrders,
                       color: "bg-violet-500",
                       icon: Truck,
                     },
                     {
                       label: "Đã giao",
-                      value: orderStats.deliveredOrders,
+                      value: chartStats.deliveredOrders,
                       color: "bg-cyan-500",
                       icon: CheckCircle,
                     },
                     {
                       label: "Đã hủy",
-                      value: orderStats.cancelledOrders,
+                      value: chartStats.cancelledOrders,
                       color: "bg-rose-500",
                       icon: XCircle,
                     },
@@ -605,19 +903,19 @@ export default function AdminDashboard() {
                         <p className="text-xs text-slate-500">{item.label}</p>
                         <p className="text-lg font-bold text-slate-800">
                           {item.value.toLocaleString()}
-                        </p>
-                      </div>
+              </p>
+            </div>
                       <div className="ml-auto">
                         <span className="text-xs font-medium text-slate-500">
-                          {orderStats.totalOrders > 0
+                          {chartStats.totalOrders > 0
                             ? (
-                                (item.value / orderStats.totalOrders) *
+                                (item.value / chartStats.totalOrders) *
                                 100
                               ).toFixed(1)
                             : 0}
                           %
                         </span>
-                      </div>
+            </div>
                     </div>
                   ))}
                 </div>
@@ -627,46 +925,71 @@ export default function AdminDashboard() {
                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShoppingCart className="w-10 h-10 text-slate-300" />
                 </div>
-                <p className="text-slate-500 font-medium">Chưa có đơn hàng</p>
+                <p className="text-slate-500 font-medium">Chưa có đơn hàng trong khoảng thời gian này</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Commission & Revenue Stats */}
+        {/* Commission & Revenue Stats - Báo cáo doanh thu thật */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl shadow-lg shadow-emerald-200">
                   <Wallet className="w-6 h-6 text-white" />
                 </div>
-                <div>
+            <div>
                   <h2 className="text-xl font-bold text-slate-800">
-                    💰 Thống Kê Tài Chính
+                    💰 Báo Cáo Doanh Thu Thật
                   </h2>
                   <p className="text-sm text-slate-500">
-                    Doanh thu và hoa hồng năm {new Date().getFullYear()}
+                    Doanh thu thực tế từ đơn hàng đã thanh toán
                   </p>
                 </div>
               </div>
             </div>
           </div>
           <div className="p-6 space-y-4">
-            {/* Revenue Card */}
+            {/* Actual Revenue Card - Doanh thu thực từ dashboard-statistics */}
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-5 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-100 text-sm">Tổng Doanh Thu</p>
+                  <p className="text-emerald-100 text-sm">Doanh Thu Thực</p>
                   <p className="text-3xl font-bold mt-1">
+                    {formatCurrency(actualRevenue)}
+                  </p>
+                  <p className="text-emerald-200 text-xs mt-1">
+                    Từ đơn hàng đã thanh toán thành công
+              </p>
+            </div>
+                <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="w-8 h-8" />
+            </div>
+          </div>
+        </div>
+
+            {/* Comparison Card - So sánh doanh thu */}
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+                  <p className="text-slate-500 text-sm">Tổng giá trị đơn hàng</p>
+                  <p className="text-xl font-bold text-slate-700">
                     {formatCurrency(orderStats.totalRevenue)}
                   </p>
                 </div>
-                <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-8 h-8" />
+                <div className="text-center px-4">
+                  <ArrowRight className="w-5 h-5 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-400 mt-1">Sau thanh toán</p>
                 </div>
-              </div>
+                <div className="text-right">
+                  <p className="text-emerald-600 text-sm">Doanh thu thực</p>
+                  <p className="text-xl font-bold text-emerald-600">
+                    {formatCurrency(actualRevenue)}
+              </p>
             </div>
+            </div>
+          </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
@@ -680,7 +1003,10 @@ export default function AdminDashboard() {
                 <p className="text-2xl font-bold text-amber-800">
                   {formatCurrency(orderStats.totalPlatformCommission)}
                 </p>
-              </div>
+                <p className="text-xs text-amber-600 mt-1">
+                  Thu từ đơn hàng đã thanh toán
+                </p>
+        </div>
 
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
@@ -691,6 +1017,9 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-2xl font-bold text-blue-800">
                   {formatCurrency(orderStats.totalArtistEarnings)}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Tổng thu nhập nghệ nhân
                 </p>
               </div>
 
@@ -704,6 +1033,9 @@ export default function AdminDashboard() {
                 <p className="text-2xl font-bold text-violet-800">
                   {formatCurrency(orderStats.totalShippingFees)}
                 </p>
+                <p className="text-xs text-violet-600 mt-1">
+                  Tổng phí ship thu được
+                </p>
               </div>
 
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
@@ -715,6 +1047,9 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-2xl font-bold text-slate-800">
                   {formatCurrency(orderStats.unpaidCommissions)}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Cần thanh toán cho nghệ nhân
                 </p>
               </div>
             </div>
@@ -771,7 +1106,7 @@ export default function AdminDashboard() {
               <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg shadow-amber-200">
                 <Award className="w-6 h-6 text-white" />
               </div>
-              <div>
+            <div>
                 <h2 className="text-xl font-bold text-slate-800">
                   🏆 Top Sản Phẩm Bán Chạy
                 </h2>
@@ -789,8 +1124,8 @@ export default function AdminDashboard() {
               </p>
               <p className="text-xs text-slate-500">Tổng đã bán</p>
             </div>
+            </div>
           </div>
-        </div>
         <div className="p-6">
           {bestSellingProducts.length > 0 ? (
             <div className="space-y-5">
@@ -844,7 +1179,7 @@ export default function AdminDashboard() {
                             #{index + 1}
                           </div>
                         )}
-                      </div>
+        </div>
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
@@ -892,9 +1227,9 @@ export default function AdminDashboard() {
                           {product.totalSold.toLocaleString()}
                         </p>
                         <p className="text-xs text-slate-500">đã bán</p>
-                      </div>
-                    </div>
-                  </div>
+            </div>
+            </div>
+          </div>
                 );
               })}
             </div>
@@ -918,12 +1253,12 @@ export default function AdminDashboard() {
       {revenueTrend.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl shadow-lg shadow-emerald-200">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <div>
+            <div>
                   <h2 className="text-xl font-bold text-slate-800">
                     📈 Xu Hướng Doanh Thu
                   </h2>
@@ -1007,7 +1342,7 @@ export default function AdminDashboard() {
                             })}
                           </p>
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-slate-800" />
-                        </div>
+            </div>
 
                         {/* Value label */}
                         <span className="text-xs font-bold text-emerald-600 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1028,13 +1363,13 @@ export default function AdminDashboard() {
                         >
                           {/* Shine effect */}
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 group-hover:animate-shine" />
-                        </div>
+            </div>
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             {/* X-axis labels */}
             <div className="flex mt-3 ml-20">
@@ -1082,28 +1417,28 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                      <img
-                        src={product.image}
-                        alt={product.name}
+                    <img
+                      src={product.image}
+                      alt={product.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.src = "/images/placeholder.jpg";
                         }}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 truncate">
-                        {product.name}
-                      </p>
+                      {product.name}
+                    </p>
                       <p className="text-sm text-slate-500 truncate">
                         {product.category} • {product.artist}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-amber-600">
-                        {formatCurrency(product.price)}
-                      </p>
-                    </div>
+                      {formatCurrency(product.price)}
+                    </p>
+                  </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1118,7 +1453,7 @@ export default function AdminDashboard() {
               <div className="px-6 py-12 text-center">
                 <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">Chưa có sản phẩm nào</p>
-              </div>
+            </div>
             )}
           </div>
         </div>
@@ -1155,29 +1490,29 @@ export default function AdminDashboard() {
                       </p>
                       <p className="text-sm text-slate-500">{order.customer}</p>
                       <p className="text-xs text-slate-400">{order.date}</p>
-                    </div>
+                  </div>
                     <div className="text-right space-y-2">
                       <p className="font-semibold text-slate-800">
-                        {formatCurrency(order.amount)}
-                      </p>
-                      <span
+                      {formatCurrency(order.amount)}
+                    </p>
+                    <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          order.status
-                        )}`}
-                      >
-                        {getStatusText(order.status)}
-                      </span>
-                    </div>
+                        order.status
+                      )}`}
+                    >
+                      {getStatusText(order.status)}
+                    </span>
                   </div>
                 </div>
+            </div>
               ))
             ) : (
               <div className="px-6 py-12 text-center">
                 <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">Chưa có đơn hàng nào</p>
-              </div>
-            )}
           </div>
+            )}
+        </div>
         </div>
       </div>
     </div>

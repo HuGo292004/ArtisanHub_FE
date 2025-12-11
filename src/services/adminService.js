@@ -2,8 +2,22 @@ import axiosClient from "./axiosClient";
 
 // ===================== DASHBOARD STATISTICS =====================
 // GET /api/admin/dashboard-statistics
+// Response: { totalRevenue: number, ... } - Doanh Thu Thực (từ đơn đã thanh toán)
 export function getDashboardStatistics() {
   return axiosClient.get("/api/admin/dashboard-statistics");
+}
+
+// ===================== ORDER STATISTICS =====================
+// GET /api/admin/orders/statistics
+// Response: { 
+//   totalRevenue: number,              - Tổng Giá Trị Đơn Hàng
+//   totalPlatformCommission: number,   - Hoa Hồng Nền Tảng
+//   totalArtistEarnings: number,       - Nghệ Nhân Nhận
+//   totalOrders: number,               - Tổng Đơn Hàng
+//   paidOrders, pendingOrders, processingOrders, shippingOrders, deliveredOrders, cancelledOrders
+// }
+export function getOrderStatistics(params = {}) {
+  return axiosClient.get("/api/admin/orders/statistics", { params });
 }
 
 // ===================== WITHDRAW REQUESTS =====================
@@ -60,11 +74,6 @@ export function getOrderById(orderId) {
   return axiosClient.get(`/api/admin/orders/${orderId}`);
 }
 
-// GET /api/admin/orders/statistics - Thống kê đơn hàng
-export function getOrderStatistics(params = {}) {
-  return axiosClient.get("/api/admin/orders/statistics", { params });
-}
-
 // ===================== ARTISTS =====================
 // GET /api/admin/artists - Lấy danh sách tất cả nghệ nhân
 export function getAllArtists(params = {}) {
@@ -103,6 +112,9 @@ const adminService = {
   // Dashboard
   getDashboardStatistics,
 
+  // Order Statistics
+  getOrderStatistics,
+
   // Withdraw Requests
   getPendingWithdrawRequests,
   approveWithdrawRequest,
@@ -121,7 +133,6 @@ const adminService = {
   getAllOrders,
   getOrderAdminDetail,
   getOrderById,
-  getOrderStatistics,
 
   // Artists
   getAllArtists,
