@@ -53,7 +53,7 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [isProfileOpen]);
 
-  // Kiểm tra và reload giỏ hàng sau khi thanh toán
+  // Kiểm tra và reload giỏ hàng sau khi thanh toán (chỉ chạy 1 lần)
   useEffect(() => {
     const checkAndReloadCart = async () => {
       if (!isLoggedIn) return;
@@ -66,13 +66,21 @@ export default function Header() {
         // Nếu thanh toán trong vòng 2 phút gần đây
         if (timeDiff < 2 * 60 * 1000) {
           console.log("Header: Reload giỏ hàng sau thanh toán...");
+          // Xóa flag ngay lập tức để tránh gọi lại nhiều lần
+          localStorage.removeItem("last_paid_order");
+          localStorage.removeItem("payment_success_time");
           await loadCartItems(false);
+        } else {
+          // Xóa flag cũ nếu đã quá 2 phút
+          localStorage.removeItem("last_paid_order");
+          localStorage.removeItem("payment_success_time");
         }
       }
     };
 
     checkAndReloadCart();
-  }, [isLoggedIn, loadCartItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]); // Chỉ phụ thuộc vào isLoggedIn, không phụ thuộc loadCartItems
 
   const handleCartClick = () => {
     navigate("/cart");

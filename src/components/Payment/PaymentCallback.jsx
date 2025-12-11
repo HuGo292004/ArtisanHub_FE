@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, XCircle, Loader2, Home, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ const PaymentCallback = () => {
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
 
+  // Ref để đảm bảo chỉ xử lý 1 lần (tránh React Strict Mode gọi 2 lần)
+  const isProcessed = useRef(false);
+
   useEffect(() => {
     const handlePaymentResult = async () => {
       // Parse payment result from URL params
@@ -34,6 +37,12 @@ const PaymentCallback = () => {
         return;
       }
 
+      // Kiểm tra đã xử lý chưa (tránh gọi nhiều lần)
+      if (isProcessed.current) {
+        return;
+      }
+      isProcessed.current = true;
+
       // Determine payment status
       // Ưu tiên kiểm tra cancel trước vì có thể có code=00 nhưng cancel=true
       let resultStatus = "pending";
@@ -44,9 +53,6 @@ const PaymentCallback = () => {
       } else {
         resultStatus = "failed";
       }
-      
-      console.log("Payment callback params:", { code, status, orderCode, cancel });
-      console.log("Determined payment status:", resultStatus);
 
       setPaymentStatus({
         status: resultStatus,
@@ -55,96 +61,74 @@ const PaymentCallback = () => {
       });
 
       // Gọi API cập nhật trạng thái đơn hàng
+      const newStatus = resultStatus === "success" ? "PAID" : "CANCELLED";
+
       try {
-        const newStatus = resultStatus === "success" ? "PAID" : "CANCELLED";
-        console.log(`Đang cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}...`);
-        
-        const updateResult = await orderService.updateOrderStatus(orderCode, newStatus);
-        console.log("Kết quả cập nhật trạng thái:", updateResult);
-        
-        if (updateResult?.isSuccess) {
-          console.log(`✓ Đã cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}`);
-        } else {
-          console.warn("API cập nhật trạng thái không thành công:", updateResult);
+        await orderService.updateOrderStatus(orderCode, newStatus);
+      } catch {
+        // Bỏ qua lỗi update status
+      }
+
+      // Gọi API tính hoa hồng
+      if (resultStatus === "success") {
+        try {
+          await orderService.calculateCommission(orderCode, "PAID");
+        } catch {
+          // Bỏ qua lỗi tính hoa hồng
         }
-      } catch (statusError) {
-        console.error("Lỗi khi cập nhật trạng thái đơn hàng:", statusError);
       }
 
       // Xóa giỏ hàng nếu thanh toán thành công
       if (resultStatus === "success") {
-        localStorage.setItem("last_paid_order", orderCode);
-        localStorage.setItem("payment_success_time", Date.now().toString());
-        
         try {
-          console.log("Bắt đầu xóa giỏ hàng sau thanh toán thành công...");
+          // Kiểm tra giỏ hàng có item không trước khi xóa
+          const cartResponse = await cartService.getCartItems();
+          let cartItems = [];
 
-          try {
-            const clearResult = await cartService.clearCart();
-            console.log("Clear cart API result:", clearResult);
+          if (cartResponse?.isSuccess && cartResponse?.data) {
+            cartItems = Array.isArray(cartResponse.data)
+              ? cartResponse.data
+              : cartResponse.data.items || [];
+          }
 
-            if (clearResult && clearResult.isSuccess) {
-              console.log("✓ Đã xóa giỏ hàng thành công qua API clear");
-            } else {
-              throw new Error("API clear không thành công");
-            }
-          } catch (clearError) {
-            console.warn("API clear thất bại, xóa từng item một:", clearError);
-
-            await loadCartItems(false);
-            const currentCartResponse = await cartService.getCartItems();
-            let itemsToDelete = [];
-
-            if (currentCartResponse?.isSuccess && currentCartResponse?.data) {
-              if (Array.isArray(currentCartResponse.data.items)) {
-                itemsToDelete = currentCartResponse.data.items;
-              } else if (Array.isArray(currentCartResponse.data)) {
-                itemsToDelete = currentCartResponse.data;
-              }
-            } else if (Array.isArray(currentCartResponse)) {
-              itemsToDelete = currentCartResponse;
-            }
-
-            for (const item of itemsToDelete) {
-              try {
-                const itemId = item.cartItemId || item.id;
-                if (itemId) {
+          if (cartItems.length > 0) {
+            // Xóa từng item trong giỏ hàng
+            for (const item of cartItems) {
+              const itemId = item.cartItemId || item.id;
+              if (itemId) {
+                try {
                   await cartService.removeFromCart(itemId);
-                  console.log(`✓ Đã xóa item ${itemId}`);
+                } catch {
+                  // Bỏ qua lỗi khi xóa từng item
                 }
-              } catch (itemError) {
-                console.error("Lỗi khi xóa item:", itemError);
               }
             }
           }
 
+          // Reload cart để cập nhật UI
           await loadCartItems(false);
           localStorage.removeItem("pending_cart_items");
-          console.log("✓ Giỏ hàng đã được xóa hoàn toàn");
-        } catch (error) {
-          console.error("Lỗi khi xóa giỏ hàng:", error);
-          try {
-            await loadCartItems(false);
-          } catch (reloadError) {
-            console.error("Lỗi khi reload cart:", reloadError);
-          }
+        } catch {
+          // Bỏ qua lỗi xử lý giỏ hàng
         }
       }
 
       setLoading(false);
-
-      // Auto redirect sau 5 giây nếu thành công
-      if (resultStatus === "success") {
-        const timer = setTimeout(() => {
-          // Clear URL params và về trang chủ
-          navigate("/", { replace: true });
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
     };
 
     handlePaymentResult();
-  }, [searchParams, navigate, loadCartItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Chỉ chạy 1 lần khi component mount
+
+  // Auto redirect sau 5 giây nếu thành công
+  useEffect(() => {
+    if (paymentStatus?.status === "success") {
+      const timer = setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStatus?.status, navigate]);
 
   // Nếu không có orderCode trong URL, không hiển thị gì
   if (!searchParams.get("orderCode")) {
@@ -269,4 +253,3 @@ const PaymentCallback = () => {
 };
 
 export default PaymentCallback;
-

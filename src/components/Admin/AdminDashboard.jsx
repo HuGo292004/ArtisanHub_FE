@@ -289,7 +289,7 @@ export default function AdminDashboard() {
         <div className="text-center space-y-4">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
-            <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-0" />
+            <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-3" />
           </div>
           <p className="text-slate-600 font-medium">Đang tải dữ liệu...</p>
         </div>
