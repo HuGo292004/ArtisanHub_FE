@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -15,12 +16,15 @@ import {
   BarChart3,
   Palette,
   User,
+  Bell,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/services/authService";
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [userInfo, setUserInfo] = useState(null);
@@ -46,7 +50,6 @@ export default function AdminLayout() {
           return;
         }
 
-        // Lấy thông tin user
         fetchUserInfo();
       } catch (error) {
         setIsLoggedIn(false);
@@ -59,7 +62,6 @@ export default function AdminLayout() {
         const profileRes = await getProfile();
         setUserInfo(profileRes?.data);
       } catch (error) {
-        // Fallback: tạo user info từ localStorage nếu có
         const email = localStorage.getItem("user_email") || "admin@example.com";
         setUserInfo({ username: null, email, role: "Admin" });
       }
@@ -78,66 +80,28 @@ export default function AdminLayout() {
 
   const menuItems = [
     {
-      title: "Hệ Thống Quản Lý",
-      icon: <BarChart3 className="h-5 w-5" />,
-      href: "/admin",
-      isHeader: true,
-    },
-    {
       title: "Tổng quan",
-      icon: <Home className="h-5 w-5" />,
+      icon: Home,
       href: "/admin",
       isActive: location.pathname === "/admin",
     },
     {
-      title: "DANH MỤC QUẢN LÝ",
-      isHeader: true,
-    },
-    {
       title: "Quản Lý Sản Phẩm",
-      icon: <Package className="h-5 w-5" />,
+      icon: Package,
       href: "/admin/products",
       isActive: location.pathname.startsWith("/admin/products"),
-      subItems: [
-        {
-          title: "Danh sách sản phẩm",
-          href: "/admin/products",
-        },
-        {
-          title: "Danh mục sản phẩm",
-          href: "/admin/products/categories",
-        },
-      ],
-    },
-    {
-      title: "Quản Lý Nghệ Nhân",
-      icon: <Palette className="h-5 w-5" />,
-      href: "/admin/artists",
-      isActive: location.pathname.startsWith("/admin/artists"),
     },
     {
       title: "Quản Lý Đơn Hàng",
-      icon: <ShoppingCart className="h-5 w-5" />,
+      icon: ShoppingCart,
       href: "/admin/orders",
       isActive: location.pathname.startsWith("/admin/orders"),
     },
     {
-      title: "Quản Lý Khách Hàng",
-      icon: <Users className="h-5 w-5" />,
-      href: "/admin/users",
-      isActive: location.pathname.startsWith("/admin/users"),
-    },
-    {
       title: "Quản Lý Tài Khoản",
-      icon: <UserCheck className="h-5 w-5" />,
+      icon: UserCheck,
       href: "/admin/accounts",
       isActive: location.pathname.startsWith("/admin/accounts"),
-    },
-    {
-      title: "Cài Đặt Hệ Thống",
-      icon: <Settings className="h-5 w-5" />,
-      href: "/admin/settings",
-      isActive: location.pathname.startsWith("/admin/settings"),
     },
   ];
 
@@ -146,106 +110,167 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-artisan-brown-50">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-artisan-gold-500 text-artisan-brown-900 shadow-lg">
-        <div className="flex items-center justify-between h-16 px-4">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-artisan-brown-900 hover:bg-artisan-gold-400"
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            <h1 className="text-xl font-bold">Hệ Thống Quản Lý ArtisanHub</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <User className="h-5 w-5 text-artisan-brown-700" />
-              <span className="text-sm font-medium text-artisan-brown-800">
-                {userInfo?.email || "admin@example.com"}
-              </span>
+    <div className="min-h-screen bg-slate-50">
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 h-full bg-slate-900 text-white transition-all duration-300 z-50 flex flex-col ${
+          sidebarCollapsed ? "w-20" : "w-72"
+        }`}
+      >
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
+                <Palette className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="font-bold text-lg text-white">ArtisanHub</h1>
+                <p className="text-xs text-slate-400">Admin Panel</p>
+              </div>
             </div>
+          )}
+          {sidebarCollapsed && (
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center mx-auto">
+              <Palette className="w-6 h-6 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          {!sidebarCollapsed && (
+            <p className="px-3 mb-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Menu chính
+            </p>
+          )}
+          {menuItems.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <a
+                key={index}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${
+                  item.isActive
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                } ${sidebarCollapsed ? "justify-center" : ""}`}
+                title={sidebarCollapsed ? item.title : ""}
+              >
+                <Icon
+                  className={`w-5 h-5 flex-shrink-0 ${
+                    item.isActive
+                      ? "text-white"
+                      : "text-slate-400 group-hover:text-white"
+                  }`}
+                />
+                {!sidebarCollapsed && (
+                  <span className="font-medium">{item.title}</span>
+                )}
+              </a>
+            );
+          })}
+        </nav>
+
+        {/* User Info & Collapse Button */}
+        <div className="border-t border-slate-800 p-4">
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-3 mb-4 p-3 bg-slate-800/50 rounded-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-700 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-slate-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {userInfo?.username || "Admin"}
+                </p>
+                <p className="text-xs text-slate-400 truncate">
+                  {userInfo?.email || "admin@example.com"}
+                </p>
+              </div>
+            </div>
+          )}
+          <div
+            className={`flex ${sidebarCollapsed ? "flex-col gap-2" : "gap-2"}`}
+          >
             <Button
               variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-artisan-brown-900 hover:bg-artisan-gold-400"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={`text-slate-400 hover:text-white hover:bg-slate-800 ${
+                sidebarCollapsed ? "w-full justify-center" : ""
+              }`}
             >
-              <LogOut className="h-5 w-5" />
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <>
+                  <ChevronLeft className="w-5 h-5 mr-2" />
+                  Thu gọn
+                </>
+              )}
             </Button>
+            {!sidebarCollapsed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Đăng xuất
+              </Button>
+            )}
+            {sidebarCollapsed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 w-full justify-center"
+                title="Đăng xuất"
+              >
+                <LogOut className="w-5 h-5" />
+              </Button>
+            )}
           </div>
         </div>
-      </header>
+      </aside>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside
-          className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-artisan-brown-800 text-white transition-all duration-300 z-40 overflow-y-auto ${
-            sidebarOpen ? "w-64" : "w-0 overflow-hidden"
-          }`}
-        >
-          <div className="p-4">
-            <nav className="space-y-2">
-              {menuItems.map((item, index) => (
-                <div key={index}>
-                  {item.isHeader ? (
-                    <div className="px-3 py-2 text-xs font-semibold text-artisan-gold-300 uppercase tracking-wider">
-                      {item.title}
-                    </div>
-                  ) : (
-                    <div>
-                      <a
-                        href={item.href}
-                        className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors duration-200 ${
-                          item.isActive
-                            ? "bg-artisan-gold-600 text-white"
-                            : "text-artisan-gold-200 hover:bg-artisan-brown-700 hover:text-white"
-                        }`}
-                      >
-                        {item.icon}
-                        {sidebarOpen && (
-                          <span className="text-sm font-medium">
-                            {item.title}
-                          </span>
-                        )}
-                      </a>
-                      {item.subItems && sidebarOpen && item.isActive && (
-                        <div className="ml-6 mt-1 space-y-1">
-                          {item.subItems.map((subItem, subIndex) => (
-                            <a
-                              key={subIndex}
-                              href={subItem.href}
-                              className={`block px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
-                                location.pathname === subItem.href
-                                  ? "bg-artisan-gold-500 text-white"
-                                  : "text-artisan-gold-300 hover:bg-artisan-brown-700 hover:text-white"
-                              }`}
-                            >
-                              {subItem.title}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </nav>
+      {/* Main Content */}
+      <div
+        className={`transition-all duration-300 ${
+          sidebarCollapsed ? "ml-20" : "ml-72"
+        }`}
+      >
+        {/* Top Header */}
+        <header className="sticky top-0 z-40 h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold text-slate-800">
+              {menuItems.find((item) => item.isActive)?.title || "Dashboard"}
+            </h2>
           </div>
-        </aside>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-500 hover:text-slate-700"
+            >
+              <Bell className="w-5 h-5" />
+            </Button>
+            <div className="w-px h-6 bg-slate-200"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">
+                {userInfo?.username || "Admin"}
+              </span>
+            </div>
+          </div>
+        </header>
 
-        {/* Main Content */}
-        <main
-          className={`flex-1 transition-all duration-300 pt-16 ${
-            sidebarOpen ? "ml-64" : "ml-0"
-          }`}
-        >
-          <div className="p-6">
-            <Outlet />
-          </div>
+        {/* Page Content */}
+        <main className="p-6">
+          <Outlet />
         </main>
       </div>
     </div>

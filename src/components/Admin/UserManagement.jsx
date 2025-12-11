@@ -1,23 +1,27 @@
 import { useState, useEffect } from "react";
 import {
   Search,
-  Filter,
-  Plus,
   Edit,
-  Trash2,
   Eye,
-  MoreVertical,
-  UserCheck,
-  UserX,
   Mail,
   Phone,
   MapPin,
   Calendar,
   Loader2,
   RefreshCw,
+  X,
+  User,
+  ShoppingBag,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Shield,
+  Palette,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getAllAccounts, deleteAccount } from "@/services/accountService";
+import { getAllAccounts } from "@/services/accountService";
 import { useToast } from "@/components/ui/Toast";
 
 export default function UserManagement() {
@@ -28,10 +32,78 @@ export default function UserManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const toast = useToast();
+
+  // View user detail
+  const viewUserDetail = (user) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+  };
+
+  // Close modal
+  const closeModals = () => {
+    setShowDetailModal(false);
+    setSelectedUser(null);
+  };
+
+  // Get status icon
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "active":
+        return <CheckCircle className="h-4 w-4" />;
+      case "inactive":
+        return <XCircle className="h-4 w-4" />;
+      case "pending":
+        return <Clock className="h-4 w-4" />;
+      case "suspended":
+        return <AlertCircle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "active":
+        return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+      case "inactive":
+        return "bg-slate-100 text-slate-700 border border-slate-200";
+      case "pending":
+        return "bg-amber-100 text-amber-700 border border-amber-200";
+      case "suspended":
+        return "bg-rose-100 text-rose-700 border border-rose-200";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-200";
+    }
+  };
+
+  // Get role icon
+  const getRoleIcon = (role) => {
+    switch (role) {
+      case "admin":
+        return <Shield className="h-4 w-4" />;
+      case "artist":
+        return <Palette className="h-4 w-4" />;
+      default:
+        return <User className="h-4 w-4" />;
+    }
+  };
+
+  // Get role color
+  const getRoleColor = (role) => {
+    switch (role) {
+      case "admin":
+        return "bg-rose-100 text-rose-700 border border-rose-200";
+      case "artist":
+        return "bg-violet-100 text-violet-700 border border-violet-200";
+      default:
+        return "bg-blue-100 text-blue-700 border border-blue-200";
+    }
+  };
 
   // Fetch users from API
   const fetchUsers = async () => {
@@ -193,18 +265,18 @@ export default function UserManagement() {
   }, []);
 
   // Handle delete user
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
-      try {
-        await deleteAccount(userId);
-        toast.success("Xóa người dùng thành công");
-        fetchUsers(); // Refresh the list
-      } catch (err) {
-        console.error("Error deleting user:", err);
-        toast.error(err.message || "Không thể xóa người dùng");
-      }
-    }
-  };
+  // const handleDeleteUser = async (userId) => {
+  //   if (window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
+  //     try {
+  //       await deleteAccount(userId);
+  //       toast.success("Xóa người dùng thành công");
+  //       fetchUsers(); // Refresh the list
+  //     } catch (err) {
+  //       console.error("Error deleting user:", err);
+  //       toast.error(err.message || "Không thể xóa người dùng");
+  //     }
+  //   }
+  // };
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
@@ -249,10 +321,12 @@ export default function UserManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Đang tải dữ liệu...</span>
+      <div className="flex items-center justify-center h-64 bg-white rounded-2xl shadow-lg">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+          <span className="text-slate-600 font-medium">
+            Đang tải dữ liệu...
+          </span>
         </div>
       </div>
     );
@@ -261,13 +335,14 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 shadow-lg">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Quản lý người dùng
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <User className="w-7 h-7" />
+            Quản lý tài khoản
           </h1>
-          <p className="text-gray-600">
-            Quản lý tài khoản người dùng trong hệ thống
+          <p className="text-amber-100 mt-1">
+            Quản lý tất cả tài khoản người dùng trong hệ thống
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -275,72 +350,72 @@ export default function UserManagement() {
             variant="outline"
             onClick={fetchUsers}
             disabled={loading}
-            className="flex items-center space-x-2"
+            className="bg-white/20 border-white/30 text-white hover:bg-white/30"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span>Làm mới</span>
-          </Button>
-          <Button className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Thêm người dùng</span>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Làm mới
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-blue-100 rounded-xl">
+              <User className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
-                Tổng người dùng
+              <p className="text-sm font-medium text-slate-500">
+                Tổng tài khoản
               </p>
-              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+              <p className="text-2xl font-bold text-slate-800">
+                {users.length}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-emerald-100 rounded-xl">
+              <CheckCircle className="h-6 w-6 text-emerald-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">
+              <p className="text-sm font-medium text-slate-500">
                 Đang hoạt động
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-emerald-600">
                 {users.filter((u) => u.status === "active").length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-purple-600" />
+            <div className="p-3 bg-violet-100 rounded-xl">
+              <Palette className="h-6 w-6 text-violet-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Nghệ nhân</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-slate-500">Nghệ nhân</p>
+              <p className="text-2xl font-bold text-violet-600">
                 {users.filter((u) => u.role === "artist").length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100 hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-orange-600" />
+            <div className="p-3 bg-amber-100 rounded-xl">
+              <ShoppingBag className="h-6 w-6 text-amber-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Khách hàng</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-slate-500">Khách hàng</p>
+              <p className="text-2xl font-bold text-amber-600">
                 {users.filter((u) => u.role === "customer").length}
               </p>
             </div>
@@ -349,26 +424,26 @@ export default function UserManagement() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <input
                 type="text"
                 placeholder="Tìm kiếm theo tên hoặc email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
               />
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="px-4 py-2 border border-gray-300 text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 cursor-pointer transition-all"
             >
               <option value="all">Tất cả vai trò</option>
               <option value="customer">Khách hàng</option>
@@ -379,7 +454,7 @@ export default function UserManagement() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 cursor-pointer transition-all"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -390,39 +465,42 @@ export default function UserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Người dùng
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Vai trò
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Trạng thái
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Thống kê
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Ngày tham gia
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Hành động
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-slate-100">
               {currentUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr
+                  key={user.id}
+                  className="hover:bg-amber-50/50 transition-colors"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
+                      <div className="h-11 w-11 flex-shrink-0">
                         <img
-                          className="h-10 w-10 rounded-full object-cover"
+                          className="h-11 w-11 rounded-full object-cover ring-2 ring-slate-100"
                           src={
                             user.avatar ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -433,15 +511,15 @@ export default function UserManagement() {
                         />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-semibold text-slate-800">
                           {user.name}
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
+                        <div className="text-xs text-slate-500 flex items-center mt-0.5">
+                          <Mail className="h-3 w-3 mr-1 text-slate-400" />
                           {user.email}
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
+                        <div className="text-xs text-slate-500 flex items-center mt-0.5">
+                          <Phone className="h-3 w-3 mr-1 text-slate-400" />
                           {user.phone}
                         </div>
                       </div>
@@ -450,75 +528,85 @@ export default function UserManagement() {
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.role === "admin"
-                          ? "bg-red-100 text-red-800"
-                          : user.role === "artist"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg ${getRoleColor(
+                        user.role
+                      )}`}
                     >
+                      {getRoleIcon(user.role)}
                       {formatRole(user.role)}
                     </span>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg ${getStatusColor(
+                        user.status
+                      )}`}
                     >
+                      {getStatusIcon(user.status)}
                       {formatStatus(user.status)}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                     <div className="space-y-1">
                       {user.totalOrders > 0 && (
-                        <div>Đơn hàng: {user.totalOrders}</div>
+                        <div className="flex items-center gap-1 text-xs">
+                          <ShoppingBag className="h-3 w-3 text-amber-500" />
+                          <span>{user.totalOrders} đơn hàng</span>
+                        </div>
                       )}
                       {user.totalSpent > 0 && (
-                        <div>Chi tiêu: {formatCurrency(user.totalSpent)}</div>
+                        <div className="flex items-center gap-1 text-xs">
+                          <CreditCard className="h-3 w-3 text-emerald-500" />
+                          <span>{formatCurrency(user.totalSpent)}</span>
+                        </div>
                       )}
                       {user.totalProducts > 0 && (
-                        <div>Sản phẩm: {user.totalProducts}</div>
+                        <div className="flex items-center gap-1 text-xs">
+                          <Palette className="h-3 w-3 text-violet-500" />
+                          <span>{user.totalProducts} sản phẩm</span>
+                        </div>
                       )}
+                      {!user.totalOrders &&
+                        !user.totalSpent &&
+                        !user.totalProducts && (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.joinDate}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1 text-sm text-slate-600">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      {user.joinDate}
+                    </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => viewUserDetail(user)}
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2"
+                        title="Xem chi tiết"
+                      >
+                        <Eye className="h-4 w-4 mr-1.5" />
+                        Chi tiết
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setSelectedUser(user);
-                          setShowUserModal(true);
+                          // TODO: Bổ sung chức năng đổi trạng thái account
+                          console.log("Edit status for user:", user.id);
                         }}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2"
+                        title="Chỉnh sửa trạng thái"
                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        <Edit className="h-4 w-4 mr-1.5" />
+                        Chỉnh sửa
                       </Button>
                     </div>
                   </td>
@@ -587,130 +675,235 @@ export default function UserManagement() {
         )}
       </div>
 
-      {/* User Detail Modal */}
-      {showUserModal && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Chi tiết người dùng
-                </h3>
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <span className="sr-only">Đóng</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+      {/* User Detail Modal - Beautiful Design */}
+      {showDetailModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop with blur */}
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-800/60 to-slate-900/70 backdrop-blur-md"
+            onClick={closeModals}
+          ></div>
+
+          {/* Modal Container */}
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Decorative top gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500"></div>
+
+            {/* Header with gradient background */}
+            <div className="relative bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 px-8 pt-8 pb-20">
+              {/* Close button */}
+              <button
+                onClick={closeModals}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+
+              {/* Header content */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    Chi tiết tài khoản
+                  </h2>
+                  <p className="text-amber-100 text-sm">Thông tin người dùng</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Avatar floating card */}
+            <div className="relative -mt-14 px-8">
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-slate-100">
+                <div className="flex items-start gap-5">
+                  {/* Avatar */}
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg">
+                      <img
+                        src={
+                          selectedUser.avatar ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            selectedUser.name
+                          )}&background=F59E0B&color=fff&size=128&bold=true`
+                        }
+                        alt={selectedUser.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {/* Online indicator */}
+                    {selectedUser.status === "active" && (
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white"></div>
+                    )}
+                  </div>
+
+                  {/* User info */}
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-slate-800">
+                      {selectedUser.name}
+                    </h3>
+                    <p className="text-slate-500 mt-1">{selectedUser.email}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${getRoleColor(
+                          selectedUser.role
+                        )}`}
+                      >
+                        {getRoleIcon(selectedUser.role)}
+                        {formatRole(selectedUser.role)}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold ${getStatusColor(
+                          selectedUser.status
+                        )}`}
+                      >
+                        {getStatusIcon(selectedUser.status)}
+                        {formatStatus(selectedUser.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto max-h-[calc(85vh-280px)] px-8 py-6 space-y-5">
+              {/* Contact Info Card */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-5 border border-slate-200/50">
+                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Mail className="w-4 h-4 text-amber-600" />
+                  </div>
+                  Thông tin liên hệ
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Email
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {selectedUser.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Điện thoại
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {selectedUser.phone}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 md:col-span-2">
+                    <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-rose-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Địa chỉ
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {selectedUser.address}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <img
-                    className="h-16 w-16 rounded-full object-cover"
-                    src={
-                      selectedUser.avatar ||
-                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        selectedUser.name
-                      )}&background=random`
-                    }
-                    alt={selectedUser.name}
-                  />
-                  <div>
-                    <h4 className="text-lg font-medium text-gray-900">
-                      {selectedUser.name}
-                    </h4>
-                    <p className="text-sm text-gray-500">
-                      {selectedUser.email}
-                    </p>
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 text-center border border-amber-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 mx-auto mb-3 flex items-center justify-center shadow-lg shadow-amber-200">
+                    <ShoppingBag className="w-6 h-6 text-white" />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Số điện thoại
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {selectedUser.phone}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Vai trò
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {formatRole(selectedUser.role)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Trạng thái
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {formatStatus(selectedUser.status)}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Ngày tham gia
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {selectedUser.joinDate}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Địa chỉ
-                  </label>
-                  <p className="text-sm text-gray-900">
-                    {selectedUser.address}
+                  <p className="text-3xl font-bold text-amber-700">
+                    {selectedUser.totalOrders || 0}
+                  </p>
+                  <p className="text-xs font-medium text-amber-600 mt-1">
+                    Đơn hàng
                   </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Tổng đơn hàng
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {selectedUser.totalOrders}
-                    </p>
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 text-center border border-emerald-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 mx-auto mb-3 flex items-center justify-center shadow-lg shadow-emerald-200">
+                    <CreditCard className="w-6 h-6 text-white" />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Tổng chi tiêu
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {formatCurrency(selectedUser.totalSpent)}
-                    </p>
+                  <p className="text-xl font-bold text-emerald-700">
+                    {formatCurrency(selectedUser.totalSpent || 0)}
+                  </p>
+                  <p className="text-xs font-medium text-emerald-600 mt-1">
+                    Chi tiêu
+                  </p>
+                </div>
+                <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 text-center border border-violet-100 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 mx-auto mb-3 flex items-center justify-center shadow-lg shadow-violet-200">
+                    <Palette className="w-6 h-6 text-white" />
                   </div>
+                  <p className="text-3xl font-bold text-violet-700">
+                    {selectedUser.totalProducts || 0}
+                  </p>
+                  <p className="text-xs font-medium text-violet-600 mt-1">
+                    Sản phẩm
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
+              {/* Timeline Info */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
+                <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wide">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                  </div>
+                  Thời gian hoạt động
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-blue-100">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Ngày tham gia
+                      </p>
+                      <p className="text-sm font-bold text-blue-700">
+                        {selectedUser.joinDate}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-indigo-100">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide">
+                        Đăng nhập cuối
+                      </p>
+                      <p className="text-sm font-bold text-indigo-700">
+                        {selectedUser.lastLogin}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-8 py-5 bg-slate-50 border-t border-slate-100">
+              <div className="flex justify-end">
                 <Button
-                  variant="outline"
-                  onClick={() => setShowUserModal(false)}
+                  onClick={closeModals}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-2.5 rounded-xl font-medium shadow-lg shadow-amber-200 hover:shadow-xl transition-all duration-300"
                 >
                   Đóng
                 </Button>
-                <Button>Chỉnh sửa</Button>
               </div>
             </div>
           </div>

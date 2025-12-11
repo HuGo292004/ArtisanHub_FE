@@ -7,7 +7,10 @@ export const cartService = {
       const response = await axiosClient.get("/api/Carts");
       return response;
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách sản phẩm trong giỏ hàng:", error);
+      // Không log lỗi 401 - đây là trường hợp bình thường khi chưa đăng nhập
+      if (error?.status !== 401) {
+        console.error("Lỗi khi lấy danh sách sản phẩm trong giỏ hàng:", error);
+      }
       throw error;
     }
   },
