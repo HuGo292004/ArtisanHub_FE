@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from "react";
+/* eslint-disable react/prop-types */
+import { useState, useCallback, useEffect } from "react";
 import { CreditCard, X, MapPin, User, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,9 @@ import { cartService } from "@/services/cartService";
  * - Nhận `cartItems` để dựng payload products
  * - Gọi API checkout và chuyển hướng sang paymentUrl
  * - Hiển thị popup để nhập địa chỉ giao hàng trước khi thanh toán
+ * @param {Object} props - Component props
+ * @param {Array} props.cartItems - Danh sách items trong giỏ hàng
+ * @param {string} props.className - CSS class names bổ sung
  */
 const PaymentButton = ({ cartItems = [], className = "" }) => {
   const [submitting, setSubmitting] = useState(false);
@@ -59,7 +63,7 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
     setErrors({});
   };
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!shippingAddress.recipientName.trim()) {
       newErrors.recipientName = "Vui lòng nhập tên người nhận";
@@ -85,7 +89,7 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [shippingAddress]);
 
   const handleCheckout = useCallback(async () => {
     if (!cartItems?.length) return;
@@ -162,17 +166,24 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
       }
 
       // Sử dụng shippingAddress từ form đã nhập
-      // Thêm returnUrl và cancelUrl để backend biết redirect về đâu
-      const baseUrl = window.location.origin;
-      const returnUrl = `${baseUrl}/payment/success`;
-      const cancelUrl = `${baseUrl}/payment/success`;
+      // ============================================
+      // SETUP RETURN URL CHO PAYOS - QUAN TRỌNG!
+      // ============================================
+      // 1. Lấy frontend URL từ biến môi trường hoặc tự động detect
+      const frontendUrl =
+        import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+
+      // 2. Tạo returnUrl và cancelUrl - PayOS sẽ redirect về đây sau khi thanh toán
+      // PayOS sẽ redirect về root URL với query params: ?code=00&status=PAID&orderCode=...
+      const returnUrl = `${frontendUrl}/`;
+      const cancelUrl = `${frontendUrl}/`;
 
       const payload = {
         accountId,
         cartItemIds,
         shippingAddress,
-        returnUrl,
-        cancelUrl,
+        returnUrl, // Gửi cho backend, backend sẽ truyền cho PayOS
+        cancelUrl, // Gửi cho backend, backend sẽ truyền cho PayOS
       };
 
       const res = await orderService.checkout(payload);
@@ -187,14 +198,13 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
         window.location.href = url;
       }
     } catch (e) {
-      // eslint-disable-next-line no-alert
       alert(
         e?.message || "Không thể khởi tạo thanh toán. Vui lòng thử lại sau."
       );
     } finally {
       setSubmitting(false);
     }
-  }, [cartItems, shippingAddress]);
+  }, [cartItems, shippingAddress, validateForm]);
 
   return (
     <>
