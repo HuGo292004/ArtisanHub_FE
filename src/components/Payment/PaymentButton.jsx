@@ -178,42 +178,16 @@ const PaymentButton = ({ cartItems = [], className = "" }) => {
       const returnUrl = `${frontendUrl}/`;
       const cancelUrl = `${frontendUrl}/`;
 
-      // Debug: Kiểm tra URL đang được gửi
-      console.log("🔗 PayOS Return URL Debug:", {
-        "VITE_FRONTEND_URL (env)": import.meta.env.VITE_FRONTEND_URL,
-        "window.location.origin": window.location.origin,
-        "frontendUrl (đang dùng)": frontendUrl,
-        "returnUrl (gửi cho backend)": returnUrl,
-        "cancelUrl (gửi cho backend)": cancelUrl,
-        "⚠️ LƯU Ý":
-          "Nếu returnUrl là localhost, kiểm tra biến môi trường VITE_FRONTEND_URL trên Vercel",
-      });
-
       const payload = {
         accountId,
         cartItemIds,
         shippingAddress,
-        returnUrl, // Gửi cho backend, backend sẽ truyền cho PayOS
-        cancelUrl, // Gửi cho backend, backend sẽ truyền cho PayOS
-      };
-
-      // Debug: Kiểm tra payload gửi cho backend
-      console.log("📦 Payload gửi cho Backend:", {
-        accountId,
-        cartItemIds: cartItemIds.length,
         returnUrl,
         cancelUrl,
-        "⚠️ QUAN TRỌNG":
-          "Backend PHẢI sử dụng returnUrl này để tạo PayOS payment link",
-      });
+      };
 
       const res = await orderService.checkout(payload);
 
-      // Debug: Kiểm tra paymentUrl nhận từ backend
-      console.log("💳 Payment URL từ Backend:", {
-        paymentUrl: res?.data?.paymentUrl || res?.paymentUrl,
-        "⚠️ KIỂM TRA": "Backend có truyền returnUrl cho PayOS không?",
-      });
       const url =
         res?.data?.paymentUrl ||
         res?.paymentUrl ||

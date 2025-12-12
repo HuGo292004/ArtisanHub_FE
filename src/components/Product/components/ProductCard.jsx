@@ -57,11 +57,13 @@ const ProductCard = ({ product }) => {
       const result = await addToCart(productId, 1);
       if (result.success) {
         toast.success(result.message);
-        
+
         // Nếu sản phẩm được lưu vào pending (chưa đăng nhập), hỏi có muốn đăng nhập ngay
         if (result.isPending) {
           setTimeout(() => {
-            if (window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")) {
+            if (
+              window.confirm("Bạn có muốn đăng nhập ngay để hoàn tất đơn hàng?")
+            ) {
               navigate("/login");
             }
           }, 500);
@@ -135,7 +137,7 @@ const ProductCard = ({ product }) => {
         <div className="mb-4">
           <div className="mb-2">
             <span className="text-xs text-artisan-gold-600 dark:text-artisan-gold-400 font-medium">
-              {category || "Chưa phân loại"}
+              {category || ""}
             </span>
           </div>
           <h3
