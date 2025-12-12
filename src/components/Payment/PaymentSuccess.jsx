@@ -15,6 +15,7 @@ const PaymentSuccess = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [countdown, setCountdown] = useState(10); // Đếm ngược 10 giây
   const toastShown = useRef(false); // Ref để đảm bảo chỉ hiển thị toast 1 lần
 
   useEffect(() => {
@@ -39,18 +40,26 @@ const PaymentSuccess = () => {
       console.log("Payment params:", { code, status, orderCode, cancel });
       console.log("Determined payment status:", resultStatus);
 
+      // Set paymentStatus ngay lập tức để component hiển thị
       setPaymentStatus({
         status: resultStatus,
-        orderCode,
-        code,
+        orderCode: orderCode || "N/A",
+        code: code || "N/A",
+      });
+
+      console.log("✅ PaymentStatus đã được set:", {
+        status: resultStatus,
+        orderCode: orderCode || "N/A",
       });
 
       // Hiển thị Toast notification
-      if (!toastShown.current && orderCode) {
+      if (!toastShown.current) {
         toastShown.current = true;
         if (resultStatus === "success") {
           toast.success(
-            `🎉 Thanh toán thành công! Mã đơn hàng: ${orderCode}`,
+            `🎉 Thanh toán thành công!${
+              orderCode ? ` Mã đơn hàng: ${orderCode}` : ""
+            }`,
             6000
           );
         } else if (resultStatus === "cancelled") {
@@ -189,18 +198,61 @@ const PaymentSuccess = () => {
       }
 
       setLoading(false);
-
-      // Auto redirect sau 10 giây nếu thành công
-      if (resultStatus === "success") {
-        const timer = setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 10000); // 10 giây
-        return () => clearTimeout(timer);
-      }
+      console.log("✅ Loading đã được set thành false");
     };
 
-    handlePaymentResult();
+    handlePaymentResult().catch((error) => {
+      console.error("❌ Lỗi trong handlePaymentResult:", error);
+      // Đảm bảo vẫn hiển thị component ngay cả khi có lỗi
+      setPaymentStatus({
+        status: "failed",
+        orderCode: searchParams.get("orderCode") || "N/A",
+        code: searchParams.get("code") || "N/A",
+      });
+      setLoading(false);
+    });
   }, [searchParams, navigate, clearCart, loadCartItems, toast]);
+
+  // Debug: Log khi paymentStatus thay đổi
+  useEffect(() => {
+    console.log("🔄 PaymentStatus đã thay đổi:", paymentStatus);
+    console.log("🔄 Loading state:", loading);
+  }, [paymentStatus, loading]);
+
+  // Đếm ngược và redirect sau 10 giây nếu thành công - Chỉ khi đã xử lý xong (loading = false)
+  useEffect(() => {
+    if (paymentStatus?.status === "success" && !loading) {
+      console.log("⏰ Bắt đầu đếm ngược 10 giây để redirect...");
+      console.log("⏰ PaymentStatus:", paymentStatus);
+      console.log("⏰ Loading:", loading);
+
+      // Reset countdown về 10
+      setCountdown(10);
+
+      // Đếm ngược mỗi giây
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Redirect sau 10 giây
+      const redirectTimer = setTimeout(() => {
+        console.log("⏰ 10 giây đã trôi qua, redirect về trang chủ...");
+        navigate("/", { replace: true });
+      }, 10000); // 10 giây
+
+      return () => {
+        console.log("🧹 Cleanup timers");
+        clearInterval(countdownInterval);
+        clearTimeout(redirectTimer);
+      };
+    }
+  }, [paymentStatus, loading, navigate]);
 
   if (loading) {
     return (
@@ -215,7 +267,22 @@ const PaymentSuccess = () => {
     );
   }
 
+  // Nếu không có paymentStatus, hiển thị loading hoặc thông báo
+  if (!paymentStatus) {
+    return (
+      <div className="min-h-screen bg-artisan-brown-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-artisan-gold-400 animate-spin mx-auto mb-4" />
+          <p className="text-artisan-brown-300 text-lg">
+            Đang xử lý thanh toán...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const renderContent = () => {
+    console.log("🎨 Rendering content với paymentStatus:", paymentStatus);
     switch (paymentStatus?.status) {
       case "success":
         return (
@@ -240,7 +307,7 @@ const PaymentSuccess = () => {
                 ✓ Chúng tôi sẽ liên hệ với bạn sớm nhất
               </p>
               <p className="text-artisan-brown-300 text-sm">
-                ✓ Tự động chuyển về trang chủ sau 10 giây...
+                ✓ Tự động chuyển về trang chủ sau {countdown} giây...
               </p>
             </div>
           </div>
