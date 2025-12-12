@@ -191,7 +191,7 @@ const CartPage = () => {
                   item.product?.price ||
                   0;
                 const imageUrl = item.imageUrl || item.product?.images;
-                const category = item.product?.category || "Chưa phân loại";
+                const category = item.product?.category || "";
                 const totalPrice = price * item.quantity;
 
                 return (

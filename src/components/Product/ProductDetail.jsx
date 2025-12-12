@@ -37,13 +37,15 @@ const ProductDetail = () => {
   useEffect(() => {
     const checkOwnership = async () => {
       if (!isLoggedIn || !product) return;
-      
+
       try {
         const response = await getArtistProfile();
         if (response?.isSuccess && response?.data) {
           const { artistProfile, products } = response.data;
           // Check if this product belongs to the current artist
-          const isMyProduct = products?.some(p => p.productId === product.productId);
+          const isMyProduct = products?.some(
+            (p) => p.productId === product.productId
+          );
           setIsOwner(isMyProduct);
         }
       } catch {
@@ -397,7 +399,9 @@ const ProductDetail = () => {
                   </div>
                   <div className="flex gap-4">
                     <Button
-                      onClick={() => navigate(`/profile/edit-product/${product.productId}`)}
+                      onClick={() =>
+                        navigate(`/profile/edit-product/${product.productId}`)
+                      }
                       className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                     >
                       <Edit className="w-4 h-4 mr-2" />
@@ -462,8 +466,8 @@ const ProductDetail = () => {
                   {!isLoggedIn && (
                     <div className="p-3 bg-artisan-brown-800/30 rounded-lg border border-artisan-gold-500/30 text-center">
                       <p className="text-artisan-gold-400 text-sm">
-                        💡 Sản phẩm sẽ được lưu và tự động thêm vào giỏ hàng sau khi
-                        bạn đăng nhập
+                        💡 Sản phẩm sẽ được lưu và tự động thêm vào giỏ hàng sau
+                        khi bạn đăng nhập
                       </p>
                     </div>
                   )}
@@ -479,9 +483,7 @@ const ProductDetail = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-artisan-brown-300">Danh mục:</span>
-                  <span className="text-white">
-                    {product.category || "Chưa phân loại"}
-                  </span>
+                  <span className="text-white">{product.category || ""}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-artisan-brown-300">Trạng thái:</span>
