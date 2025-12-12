@@ -135,8 +135,8 @@ export const CartProvider = ({ children }) => {
         setCartItemCount(0);
       }
     } catch (err) {
-      // Không log lỗi 401 (chưa đăng nhập hoặc token hết hạn) - đây là trường hợp bình thường
-      if (err?.status !== 401) {
+      // Không log lỗi 401, 403 (chưa đăng nhập, không có quyền hoặc token hết hạn) - đây là trường hợp bình thường
+      if (err?.status !== 401 && err?.status !== 403) {
         console.error("Error loading cart items:", err);
         setError(err.message || "Không thể tải giỏ hàng");
       }

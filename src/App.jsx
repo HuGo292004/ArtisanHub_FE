@@ -29,6 +29,8 @@ import UserManagement from "./components/Admin/UserManagement";
 import ProductManagement from "./components/Admin/ProductManagement";
 import OrderManagement from "./components/Admin/OrderManagement";
 import ArtistManagement from "./components/Admin/ArtistManagement";
+import TransactionManagement from "./components/Admin/TransactionManagement";
+import WithdrawRequestManagement from "./components/Admin/WithdrawRequestManagement";
 
 // import CartPage from "@/components/Cart/CartPage";
 import CartPage from "@/components/Cart/CartPage";
@@ -36,7 +38,11 @@ import PaymentSuccess from "@/components/Payment/PaymentSuccess";
 import PaymentCallback from "@/components/Payment/PaymentCallback";
 
 // Forum components
-import { ForumLayout, ForumTopicDetail, ForumThreadDetail } from "./components/Forum";
+import {
+  ForumLayout,
+  ForumTopicDetail,
+  ForumThreadDetail,
+} from "./components/Forum";
 
 function MainLayout() {
   return (
@@ -81,15 +87,24 @@ function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/profile/add-product" element={<AddProductPage />} />
-              <Route path="/profile/edit-product/:productId" element={<EditProductPage />} />
+              <Route
+                path="/profile/edit-product/:productId"
+                element={<EditProductPage />}
+              />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               {/* Forum Routes */}
               <Route path="/forum" element={<ForumLayout />} />
-              <Route path="/forum/topic/:topicId" element={<ForumTopicDetail />} />
-              <Route path="/forum/thread/:threadId" element={<ForumThreadDetail />} />
+              <Route
+                path="/forum/topic/:topicId"
+                element={<ForumTopicDetail />}
+              />
+              <Route
+                path="/forum/thread/:threadId"
+                element={<ForumThreadDetail />}
+              />
             </Route>
             <Route path="/login" element={<LayoutLogin />} />
             <Route path="/register" element={<LayoutRegister />} />
@@ -101,6 +116,11 @@ function App() {
               <Route path="accounts" element={<UserManagement />} />
               <Route path="products" element={<ProductManagement />} />
               <Route path="orders" element={<OrderManagement />} />
+              <Route path="transactions" element={<TransactionManagement />} />
+              <Route
+                path="withdraw-requests"
+                element={<WithdrawRequestManagement />}
+              />
               <Route path="artists" element={<ArtistManagement />} />
             </Route>
           </Routes>

@@ -55,3 +55,14 @@ export function updateArtistOrderStatus(orderId, newStatus) {
     newStatus: newStatus,
   });
 }
+
+// Lấy số dư ví của artist (GET /api/artist-profiles/balance)
+export function getWalletBalance() {
+  return axiosClient.get("/api/artist-profiles/balance");
+}
+
+// Tạo yêu cầu rút tiền (POST /api/artist-profiles/withdraw-request)
+// Body: { amount: number, bankName: string, accountHolder: string, accountNumber: string }
+export function createWithdrawRequest(data) {
+  return axiosClient.post("/api/artist-profiles/withdraw-request", data);
+}

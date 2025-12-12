@@ -18,13 +18,17 @@ import {
   Clock,
   PackageCheck,
   ArrowRight,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/components/ui/Toast";
 import {
   getArtistOrders,
   getArtistOrderDetail,
   updateArtistOrderStatus,
+  getWalletBalance,
+  createWithdrawRequest,
 } from "@/services/artistService";
 
 // Order status flow for display
@@ -39,6 +43,7 @@ const ORDER_STATUS_FLOW = [
 // (PAID -> Processing -> Shipping, Delivered do Customer xác nhận)
 
 const ArtistOrdersContent = () => {
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,6 +55,16 @@ const ArtistOrdersContent = () => {
   const [orderDetail, setOrderDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawData, setWithdrawData] = useState({
+    amount: "",
+    bankName: "",
+    accountHolder: "",
+    accountNumber: "",
+  });
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
   const pageSize = 10;
 
   // Fetch orders
@@ -78,8 +93,24 @@ const ArtistOrdersContent = () => {
     }
   };
 
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    setLoadingBalance(true);
+    try {
+      const response = await getWalletBalance();
+      if (response?.isSuccess && response?.data) {
+        setWalletBalance(response.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy số dư ví:", error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
+    fetchWalletBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, statusFilter]);
 
@@ -162,9 +193,75 @@ const ArtistOrdersContent = () => {
       }
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái:", error);
-      alert("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
+      toast.error("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  // Handle withdraw request
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+
+    // Validation
+    if (!withdrawData.amount || parseFloat(withdrawData.amount) <= 0) {
+      toast.error("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+
+    if (parseFloat(withdrawData.amount) > (walletBalance?.balance || 0)) {
+      toast.error("Số tiền rút không được vượt quá số dư hiện có");
+      return;
+    }
+
+    if (
+      !withdrawData.bankName ||
+      !withdrawData.accountHolder ||
+      !withdrawData.accountNumber
+    ) {
+      toast.error("Vui lòng điền đầy đủ thông tin ngân hàng");
+      return;
+    }
+
+    setSubmittingWithdraw(true);
+    try {
+      const response = await createWithdrawRequest({
+        amount: parseFloat(withdrawData.amount),
+        bankName: withdrawData.bankName,
+        accountHolder: withdrawData.accountHolder,
+        accountNumber: withdrawData.accountNumber,
+      });
+
+      if (
+        response?.isSuccess ||
+        response?.statusCode === 200 ||
+        response?.success
+      ) {
+        const successMessage =
+          response?.message || "Yêu cầu rút tiền thành công";
+        toast.success(successMessage);
+        setShowWithdrawModal(false);
+        setWithdrawData({
+          amount: "",
+          bankName: "",
+          accountHolder: "",
+          accountNumber: "",
+        });
+        // Refresh wallet balance
+        fetchWalletBalance();
+      } else {
+        toast.error(
+          response?.message || "Có lỗi xảy ra khi gửi yêu cầu rút tiền"
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi rút tiền:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Có lỗi xảy ra khi gửi yêu cầu rút tiền"
+      );
+    } finally {
+      setSubmittingWithdraw(false);
     }
   };
 
@@ -267,14 +364,61 @@ const ArtistOrdersContent = () => {
         </p>
       </div>
 
+      {/* Wallet Balance Card */}
+      <Card className="bg-gradient-to-r from-artisan-gold-600/20 to-artisan-gold-500/10 border-artisan-gold-500/30 mb-6">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between pt-3">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-artisan-gold-500/20 rounded-xl">
+                <Wallet className="w-8 h-8 text-artisan-gold-400" />
+              </div>
+              <div>
+                <p className="text-artisan-brown-300 text-sm mb-1">Số dư ví</p>
+                {loadingBalance ? (
+                  <div className="animate-pulse bg-artisan-brown-700 h-8 w-32 rounded"></div>
+                ) : (
+                  <p className="text-3xl font-bold text-artisan-gold-400">
+                    {formatPrice(walletBalance?.balance || 0)}đ
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="text-right space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-artisan-brown-400">Đang chờ:</span>
+                <span className="text-yellow-400 font-semibold">
+                  {formatPrice(walletBalance?.pendingBalance || 0)}đ
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-artisan-brown-400">Tổng cộng:</span>
+                <span className="text-white font-semibold">
+                  {formatPrice(walletBalance?.totalBalance || 0)}đ
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-artisan-gold-500/20">
+            <Button
+              onClick={() => setShowWithdrawModal(true)}
+              disabled={!walletBalance?.balance || walletBalance.balance <= 0}
+              className="w-full bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white font-semibold"
+            >
+              <DollarSign className="w-4 h-4 mr-2" />
+              Rút tiền
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="bg-artisan-brown-800/50 border-artisan-brown-700">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-blue-500/20 rounded-lg">
+            <div className="p-3 bg-blue-500/20 rounded-lg pt-1">
               <ShoppingBag className="w-6 h-6 text-blue-400" />
             </div>
-            <div>
+            <div className="pt-1">
               <p className="text-artisan-brown-400 text-sm">Tổng đơn hàng</p>
               <p className="text-2xl font-bold text-white">{totalOrders}</p>
             </div>
@@ -282,10 +426,10 @@ const ArtistOrdersContent = () => {
         </Card>
         <Card className="bg-artisan-brown-800/50 border-artisan-brown-700">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-orange-500/20 rounded-lg">
+            <div className="p-3 bg-orange-500/20 rounded-lg pt-1">
               <Clock className="w-6 h-6 text-orange-400" />
             </div>
-            <div>
+            <div className="pt-1">
               <p className="text-artisan-brown-400 text-sm">Chờ xử lý</p>
               <p className="text-2xl font-bold text-white">
                 {
@@ -299,10 +443,10 @@ const ArtistOrdersContent = () => {
         </Card>
         <Card className="bg-artisan-brown-800/50 border-artisan-brown-700">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg">
+            <div className="p-3 bg-purple-500/20 rounded-lg pt-1">
               <Truck className="w-6 h-6 text-purple-400" />
             </div>
-            <div>
+            <div className="pt-1">
               <p className="text-artisan-brown-400 text-sm">Đang giao</p>
               <p className="text-2xl font-bold text-white">
                 {orders.filter((o) => o.status === "Shipping").length}
@@ -312,10 +456,10 @@ const ArtistOrdersContent = () => {
         </Card>
         <Card className="bg-artisan-brown-800/50 border-artisan-brown-700">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/20 rounded-lg">
+            <div className="p-3 bg-emerald-500/20 rounded-lg pt-1">
               <PackageCheck className="w-6 h-6 text-emerald-400" />
             </div>
-            <div>
+            <div className="pt-1">
               <p className="text-artisan-brown-400 text-sm">Đã giao</p>
               <p className="text-2xl font-bold text-white">
                 {orders.filter((o) => o.status === "Delivered").length}
@@ -328,7 +472,7 @@ const ArtistOrdersContent = () => {
       {/* Filters */}
       <Card className="bg-artisan-brown-800/50 border-artisan-brown-700 mb-6">
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 pt-6">
             <form onSubmit={handleSearch} className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-artisan-brown-400" />
@@ -804,6 +948,157 @@ const ArtistOrdersContent = () => {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md bg-artisan-brown-900 border-artisan-brown-700">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <DollarSign className="w-6 h-6 text-artisan-gold-400" />
+                  Rút tiền
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawData({
+                      amount: "",
+                      bankName: "",
+                      accountHolder: "",
+                      accountNumber: "",
+                    });
+                  }}
+                  className="text-artisan-brown-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <form onSubmit={handleWithdraw} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-artisan-brown-300 mb-2">
+                    Số tiền rút (VNĐ)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={walletBalance?.balance || 0}
+                    value={withdrawData.amount}
+                    onChange={(e) =>
+                      setWithdrawData({
+                        ...withdrawData,
+                        amount: e.target.value,
+                      })
+                    }
+                    placeholder="Nhập số tiền muốn rút"
+                    className="w-full px-4 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:border-artisan-gold-500"
+                    required
+                  />
+                  <p className="text-xs text-artisan-brown-400 mt-1">
+                    Số dư khả dụng: {formatPrice(walletBalance?.balance || 0)}đ
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-artisan-brown-300 mb-2">
+                    Tên ngân hàng
+                  </label>
+                  <input
+                    type="text"
+                    value={withdrawData.bankName}
+                    onChange={(e) =>
+                      setWithdrawData({
+                        ...withdrawData,
+                        bankName: e.target.value,
+                      })
+                    }
+                    placeholder="VD: Vietcombank, Techcombank..."
+                    className="w-full px-4 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:border-artisan-gold-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-artisan-brown-300 mb-2">
+                    Chủ tài khoản
+                  </label>
+                  <input
+                    type="text"
+                    value={withdrawData.accountHolder}
+                    onChange={(e) =>
+                      setWithdrawData({
+                        ...withdrawData,
+                        accountHolder: e.target.value,
+                      })
+                    }
+                    placeholder="Tên chủ tài khoản"
+                    className="w-full px-4 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:border-artisan-gold-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-artisan-brown-300 mb-2">
+                    Số tài khoản
+                  </label>
+                  <input
+                    type="text"
+                    value={withdrawData.accountNumber}
+                    onChange={(e) =>
+                      setWithdrawData({
+                        ...withdrawData,
+                        accountNumber: e.target.value,
+                      })
+                    }
+                    placeholder="Nhập số tài khoản"
+                    className="w-full px-4 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:border-artisan-gold-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      setWithdrawData({
+                        amount: "",
+                        bankName: "",
+                        accountHolder: "",
+                        accountNumber: "",
+                      });
+                    }}
+                    className="flex-1 border-artisan-brown-600 text-artisan-brown-300 hover:bg-artisan-brown-800"
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submittingWithdraw}
+                    className="flex-1 bg-artisan-gold-500 hover:bg-artisan-gold-600 text-white"
+                  >
+                    {submittingWithdraw ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Xác nhận rút tiền
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

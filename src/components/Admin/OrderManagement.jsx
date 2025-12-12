@@ -308,9 +308,11 @@ export default function OrderManagement() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
-            <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-0" />
+          <div className="flex justify-center">
+            <div className="relative w-16 h-16">
+              <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
+              <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-0" />
+            </div>
           </div>
           <p className="text-slate-600 font-medium">Đang tải đơn hàng...</p>
         </div>

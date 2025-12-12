@@ -28,7 +28,6 @@ const EditProfilePage = () => {
     Address: "",
     Gender: "",
     Dob: "",
-    Password: "", // Thêm Password field
     AvatarFile: null,
   });
 
@@ -63,7 +62,6 @@ const EditProfilePage = () => {
               : "",
           Gender: mappedGender,
           Dob: userData.dob ? userData.dob.split("T")[0] : "",
-          Password: "", // Không hiển thị password cũ
           AvatarFile: null,
         });
       } else {
@@ -121,16 +119,9 @@ const EditProfilePage = () => {
         return;
       }
 
-      if (!formData.Password?.trim()) {
-        setError("Mật khẩu không được để trống");
-        setSaving(false);
-        return;
-      }
-
       // Required fields - gửi với giá trị đã validate
       formDataToSend.append("Username", formData.Username.trim());
       formDataToSend.append("Email", formData.Email.trim());
-      formDataToSend.append("Password", formData.Password.trim());
 
       // Optional fields - chỉ gửi khi có giá trị thực (không phải "string" placeholder)
       if (
@@ -369,24 +360,6 @@ const EditProfilePage = () => {
                       className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
                       placeholder="Nhập email"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-artisan-brown-300 text-sm font-medium mb-2">
-                      Mật khẩu *
-                    </label>
-                    <input
-                      type="password"
-                      name="Password"
-                      value={formData.Password}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 bg-artisan-brown-800 border border-artisan-brown-600 rounded-lg text-white placeholder-artisan-brown-400 focus:outline-none focus:ring-2 focus:ring-artisan-gold-500 focus:border-transparent"
-                      placeholder="Nhập mật khẩu"
-                    />
-                    <p className="text-artisan-brown-400 text-xs mt-1">
-                      Mật khẩu là bắt buộc để cập nhật thông tin
-                    </p>
                   </div>
                 </div>
               </Card>

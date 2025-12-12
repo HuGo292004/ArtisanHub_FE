@@ -334,25 +334,25 @@ const MyStore = () => {
                 {products.map((product) => (
                   <div
                     key={product.productId}
-                    className="bg-artisan-brown-800 rounded-lg overflow-hidden border border-artisan-brown-600 hover:border-artisan-gold-500 transition-colors"
+                    className="bg-artisan-brown-800 rounded-lg overflow-hidden border border-artisan-brown-600 hover:border-artisan-gold-500 transition-colors flex flex-col h-full"
                   >
-                    <div className="aspect-w-16 aspect-h-12">
+                    <div className="w-full h-48 flex-shrink-0">
                       <img
                         src={product.images}
                         alt={product.name}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.src = "/images/placeholder.jpg";
                         }}
                       />
                     </div>
 
-                    <div className="p-4">
+                    <div className="p-4 flex flex-col flex-1">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-white truncate">
+                        <h3 className="text-lg font-semibold text-white truncate flex-1 mr-2">
                           {product.name}
                         </h3>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 flex-shrink-0">
                           Hoạt động
                         </span>
                       </div>
@@ -382,10 +382,10 @@ const MyStore = () => {
                             ? `${product.averageRating}/5`
                             : "Chưa có"}
                         </span>
-                        <span>Yêu thích: {product.favoriteCount}</span>
+                        <span>Yêu thích: {product.favoriteCount || 0}</span>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 mt-auto">
                         <Button
                           size="sm"
                           variant="outline"

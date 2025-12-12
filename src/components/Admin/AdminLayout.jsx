@@ -18,6 +18,8 @@ import {
   User,
   Bell,
   Search,
+  Wallet,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProfile } from "@/services/authService";
@@ -96,6 +98,18 @@ export default function AdminLayout() {
       icon: ShoppingCart,
       href: "/admin/orders",
       isActive: location.pathname.startsWith("/admin/orders"),
+    },
+    {
+      title: "Quản Lý Giao Dịch",
+      icon: Wallet,
+      href: "/admin/transactions",
+      isActive: location.pathname.startsWith("/admin/transactions"),
+    },
+    {
+      title: "Yêu Cầu Rút Tiền",
+      icon: Banknote,
+      href: "/admin/withdraw-requests",
+      isActive: location.pathname.startsWith("/admin/withdraw-requests"),
     },
     {
       title: "Quản Lý Tài Khoản",
