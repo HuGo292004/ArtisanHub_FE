@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   Search,
-  Edit,
   Eye,
   Mail,
   Phone,
@@ -19,9 +18,13 @@ import {
   Shield,
   Palette,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getAllAccounts } from "@/services/accountService";
+import {
+  getAllAccounts,
+  updateAccount,
+} from "@/services/accountService";
 import { useToast } from "@/components/ui/Toast";
 
 export default function UserManagement() {
@@ -35,6 +38,9 @@ export default function UserManagement() {
   const [, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const toast = useToast();
 
   // View user detail
@@ -43,10 +49,53 @@ export default function UserManagement() {
     setShowDetailModal(true);
   };
 
-  // Close modal
+  // Close modals
   const closeModals = () => {
     setShowDetailModal(false);
+    setShowDeleteModal(false);
     setSelectedUser(null);
+    setDeletingUserId(null);
+  };
+
+  // Handle deactivate user (chuyển status từ active sang inactive)
+  const handleDeleteUser = async () => {
+    if (!deletingUserId) return;
+
+    try {
+      setIsDeleting(true);
+      
+      // Lấy thông tin user hiện tại để giữ nguyên các field khác
+      const user = users.find((u) => u.id === deletingUserId);
+      if (!user) {
+        toast.error("Không tìm thấy tài khoản");
+        return;
+      }
+
+      // Tạo FormData với thông tin hiện tại và status mới là "inactive"
+      const formData = new FormData();
+      formData.append("username", user.name);
+      formData.append("email", user.email);
+      if (user.phone && user.phone !== "N/A") formData.append("phone", user.phone);
+      if (user.address && user.address !== "N/A") formData.append("address", user.address);
+      formData.append("role", user.role);
+      formData.append("status", "inactive"); // Chuyển sang không hoạt động
+
+      await updateAccount(deletingUserId, formData);
+      toast.success("Đã chuyển tài khoản sang trạng thái không hoạt động!");
+      closeModals();
+      await fetchUsers();
+    } catch (err) {
+      console.error("Error deactivating user:", err);
+      toast.error(err.message || "Không thể vô hiệu hóa tài khoản");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Open delete confirm modal (thực chất là vô hiệu hóa)
+  const openDeleteModal = (userId) => {
+    setDeletingUserId(userId);
+    setShowDeleteModal(true);
   };
 
   // Get status icon
@@ -601,15 +650,13 @@ export default function UserManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          // TODO: Bổ sung chức năng đổi trạng thái account
-                          console.log("Edit status for user:", user.id);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-2"
-                        title="Chỉnh sửa trạng thái"
+                        onClick={() => openDeleteModal(user.id)}
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-3 py-2"
+                        title="Vô hiệu hóa tài khoản"
+                        disabled={user.status === "inactive"}
                       >
-                        <Edit className="h-4 w-4 mr-1.5" />
-                        Chỉnh sửa
+                        <XCircle className="h-4 w-4 mr-1.5" />
+                        {user.status === "active" ? "Vô hiệu hóa" : "Đã vô hiệu"}
                       </Button>
                     </div>
                   </td>
@@ -908,6 +955,76 @@ export default function UserManagement() {
                   Đóng
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirm Modal */}
+      {showDeleteModal && deletingUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={closeModals}
+          ></div>
+
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <AlertCircle className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white">
+                  Vô hiệu hóa tài khoản
+                </h2>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <p className="text-slate-700">
+                Bạn có chắc chắn muốn vô hiệu hóa tài khoản này? Tài khoản sẽ
+                chuyển sang trạng thái "Không hoạt động".
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    Tài khoản sẽ không thể đăng nhập sau khi bị vô hiệu hóa.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={closeModals}
+                disabled={isDeleting}
+                className="border-slate-300 text-slate-700 hover:bg-slate-200"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Hủy
+              </Button>
+              <Button
+                onClick={handleDeleteUser}
+                disabled={isDeleting}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Vô hiệu hóa
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
