@@ -41,39 +41,56 @@ const TIME_FILTERS = [
 const getDateRange = (filterKey) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   switch (filterKey) {
     case "today":
       return {
         fromDate: today.toISOString(),
-        toDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString(),
+        toDate: new Date(
+          today.getTime() + 24 * 60 * 60 * 1000 - 1
+        ).toISOString(),
       };
-    case "yesterday":
+    case "yesterday": {
       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       return {
         fromDate: yesterday.toISOString(),
         toDate: new Date(today.getTime() - 1).toISOString(),
       };
-    case "this_week":
+    }
+    case "this_week": {
       const startOfWeek = new Date(today);
       startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
       return {
         fromDate: startOfWeek.toISOString(),
         toDate: now.toISOString(),
       };
-    case "this_month":
+    }
+    case "this_month": {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       return {
         fromDate: startOfMonth.toISOString(),
         toDate: now.toISOString(),
       };
-    case "last_month":
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    }
+    case "last_month": {
+      const startOfLastMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        1
+      );
+      const endOfLastMonth = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        0,
+        23,
+        59,
+        59
+      );
       return {
         fromDate: startOfLastMonth.toISOString(),
         toDate: endOfLastMonth.toISOString(),
       };
+    }
     case "this_year":
     default:
       return {
@@ -122,7 +139,6 @@ export default function AdminDashboard() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [chartLoading, setChartLoading] = useState(false); // Loading riêng cho biểu đồ
   const [error, setError] = useState(null);
 
   // Filter states (chỉ cho biểu đồ)
@@ -156,16 +172,12 @@ export default function AdminDashboard() {
       const [
         dashboardResponse,
         productsResponse,
-        artistsResponse,
         ordersResponse,
-        allOrdersResponse,
         orderStatsResponse,
       ] = await Promise.allSettled([
         adminService.getDashboardStatistics(),
         adminService.getAllProducts({ page: 1, size: 10 }),
-        adminService.getAllArtists(),
         adminService.getAllOrders({ page: 1, size: 5 }),
-        adminService.getAllOrders({ page: 1, size: 100 }),
         adminService.getOrderStatistics({ fromDate, toDate }),
       ]);
 
@@ -237,7 +249,10 @@ export default function AdminDashboard() {
         unpaidCommissions: 0,
       };
 
-      if (orderStatsResponse.status === "fulfilled" && orderStatsResponse.value) {
+      if (
+        orderStatsResponse.status === "fulfilled" &&
+        orderStatsResponse.value
+      ) {
         const statsRes = orderStatsResponse.value;
         if (statsRes.isSuccess && statsRes.data) {
           orderStatsData = {
@@ -282,147 +297,127 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Fetch dữ liệu CHỈ cho biểu đồ (khi filter thay đổi)
-  const fetchChartData = useCallback(async (filterKey, customFrom = null, customTo = null) => {
-    try {
-      setChartLoading(true);
-
-      // Tính date range dựa trên filter
-      let fromDate, toDate;
-      if (filterKey === "custom" && customFrom && customTo) {
-        fromDate = new Date(customFrom).toISOString();
-        toDate = new Date(customTo + "T23:59:59").toISOString();
-      } else {
-        const dateRange = getDateRange(filterKey);
-        fromDate = dateRange.fromDate;
-        toDate = dateRange.toDate;
-      }
-
-      const response = await adminService.getOrderStatistics({ fromDate, toDate });
-
-      if (response?.isSuccess && response?.data) {
-        setChartStats({
-          totalOrders: response.data.totalOrders || 0,
-          pendingOrders: response.data.pendingOrders || 0,
-          paidOrders: response.data.paidOrders || 0,
-          processingOrders: response.data.processingOrders || 0,
-          shippingOrders: response.data.shippingOrders || 0,
-          deliveredOrders: response.data.deliveredOrders || 0,
-          cancelledOrders: response.data.cancelledOrders || 0,
-        });
-      }
-    } catch (err) {
-      console.error("Lỗi khi tải dữ liệu biểu đồ:", err);
-    } finally {
-      setChartLoading(false);
-    }
-  }, []);
-
   // Fetch tất cả dữ liệu theo filter (cho filter tổng)
-  const fetchAllDataWithFilter = useCallback(async (filterKey, customFrom = null, customTo = null) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchAllDataWithFilter = useCallback(
+    async (filterKey, customFrom = null, customTo = null) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Tính date range dựa trên filter
-      let fromDate, toDate;
-      if (filterKey === "custom" && customFrom && customTo) {
-        fromDate = new Date(customFrom).toISOString();
-        toDate = new Date(customTo + "T23:59:59").toISOString();
-      } else {
-        const dateRange = getDateRange(filterKey);
-        fromDate = dateRange.fromDate;
-        toDate = dateRange.toDate;
-      }
-
-      const [
-        dashboardResponse,
-        productsResponse,
-        ordersResponse,
-        orderStatsResponse,
-      ] = await Promise.allSettled([
-        adminService.getDashboardStatistics(),
-        adminService.getAllProducts({ page: 1, size: 10 }),
-        adminService.getAllOrders({ page: 1, size: 5 }),
-        adminService.getOrderStatistics({ fromDate, toDate }),
-      ]);
-
-      // Xử lý dashboard statistics
-      if (dashboardResponse.status === "fulfilled" && dashboardResponse.value) {
-        const dashRes = dashboardResponse.value;
-        setActualRevenue(dashRes.totalRevenue || 0);
-        setBestSellingProducts(dashRes.bestSellingProducts || []);
-        setRevenueTrend(dashRes.revenueTrend || []);
-      }
-
-      // Xử lý products
-      if (productsResponse.status === "fulfilled" && productsResponse.value) {
-        const prodRes = productsResponse.value;
-        if (prodRes.isSuccess && prodRes.data) {
-          setRecentProducts((prodRes.data.items || []).slice(0, 5).map((item) => ({
-            id: item.productId,
-            name: item.name,
-            category: item.categoryName,
-            price: item.price,
-            image: parseProductImage(item.images),
-            artist: item.artistName,
-          })));
+        // Tính date range dựa trên filter
+        let fromDate, toDate;
+        if (filterKey === "custom" && customFrom && customTo) {
+          fromDate = new Date(customFrom).toISOString();
+          toDate = new Date(customTo + "T23:59:59").toISOString();
+        } else {
+          const dateRange = getDateRange(filterKey);
+          fromDate = dateRange.fromDate;
+          toDate = dateRange.toDate;
         }
-      }
 
-      // Xử lý orders
-      if (ordersResponse.status === "fulfilled" && ordersResponse.value) {
-        const orderRes = ordersResponse.value;
-        if (orderRes.isSuccess && orderRes.data) {
-          setRecentOrders((orderRes.data.items || []).slice(0, 5).map((order) => ({
-            id: order.orderId,
-            orderCode: order.orderCode,
-            customer: order.accountUsername || "N/A",
-            amount: order.totalAmount || 0,
-            status: order.status || "pending",
-            date: order.orderDate ? new Date(order.orderDate).toLocaleDateString("vi-VN") : "N/A",
-          })));
-        }
-      }
+        const [
+          dashboardResponse,
+          productsResponse,
+          ordersResponse,
+          orderStatsResponse,
+        ] = await Promise.allSettled([
+          adminService.getDashboardStatistics(),
+          adminService.getAllProducts({ page: 1, size: 10 }),
+          adminService.getAllOrders({ page: 1, size: 5 }),
+          adminService.getOrderStatistics({ fromDate, toDate }),
+        ]);
 
-      // Xử lý order statistics - cập nhật cả Stats Cards và Chart
-      if (orderStatsResponse.status === "fulfilled" && orderStatsResponse.value) {
-        const statsRes = orderStatsResponse.value;
-        if (statsRes.isSuccess && statsRes.data) {
-          const statsData = {
-            totalOrders: statsRes.data.totalOrders || 0,
-            pendingOrders: statsRes.data.pendingOrders || 0,
-            paidOrders: statsRes.data.paidOrders || 0,
-            processingOrders: statsRes.data.processingOrders || 0,
-            shippingOrders: statsRes.data.shippingOrders || 0,
-            deliveredOrders: statsRes.data.deliveredOrders || 0,
-            cancelledOrders: statsRes.data.cancelledOrders || 0,
-            totalRevenue: statsRes.data.totalRevenue || 0,
-            totalPlatformCommission: statsRes.data.totalPlatformCommission || 0,
-            totalArtistEarnings: statsRes.data.totalArtistEarnings || 0,
-            totalShippingFees: statsRes.data.totalShippingFees || 0,
-            paidCommissions: statsRes.data.paidCommissions || 0,
-            unpaidCommissions: statsRes.data.unpaidCommissions || 0,
-          };
-          setOrderStats(statsData);
-          setChartStats({
-            totalOrders: statsData.totalOrders,
-            pendingOrders: statsData.pendingOrders,
-            paidOrders: statsData.paidOrders,
-            processingOrders: statsData.processingOrders,
-            shippingOrders: statsData.shippingOrders,
-            deliveredOrders: statsData.deliveredOrders,
-            cancelledOrders: statsData.cancelledOrders,
-          });
+        // Xử lý dashboard statistics
+        if (
+          dashboardResponse.status === "fulfilled" &&
+          dashboardResponse.value
+        ) {
+          const dashRes = dashboardResponse.value;
+          setActualRevenue(dashRes.totalRevenue || 0);
+          setBestSellingProducts(dashRes.bestSellingProducts || []);
+          setRevenueTrend(dashRes.revenueTrend || []);
         }
+
+        // Xử lý products
+        if (productsResponse.status === "fulfilled" && productsResponse.value) {
+          const prodRes = productsResponse.value;
+          if (prodRes.isSuccess && prodRes.data) {
+            setRecentProducts(
+              (prodRes.data.items || []).slice(0, 5).map((item) => ({
+                id: item.productId,
+                name: item.name,
+                category: item.categoryName,
+                price: item.price,
+                image: parseProductImage(item.images),
+                artist: item.artistName,
+              }))
+            );
+          }
+        }
+
+        // Xử lý orders
+        if (ordersResponse.status === "fulfilled" && ordersResponse.value) {
+          const orderRes = ordersResponse.value;
+          if (orderRes.isSuccess && orderRes.data) {
+            setRecentOrders(
+              (orderRes.data.items || []).slice(0, 5).map((order) => ({
+                id: order.orderId,
+                orderCode: order.orderCode,
+                customer: order.accountUsername || "N/A",
+                amount: order.totalAmount || 0,
+                status: order.status || "pending",
+                date: order.orderDate
+                  ? new Date(order.orderDate).toLocaleDateString("vi-VN")
+                  : "N/A",
+              }))
+            );
+          }
+        }
+
+        // Xử lý order statistics - cập nhật cả Stats Cards và Chart
+        if (
+          orderStatsResponse.status === "fulfilled" &&
+          orderStatsResponse.value
+        ) {
+          const statsRes = orderStatsResponse.value;
+          if (statsRes.isSuccess && statsRes.data) {
+            const statsData = {
+              totalOrders: statsRes.data.totalOrders || 0,
+              pendingOrders: statsRes.data.pendingOrders || 0,
+              paidOrders: statsRes.data.paidOrders || 0,
+              processingOrders: statsRes.data.processingOrders || 0,
+              shippingOrders: statsRes.data.shippingOrders || 0,
+              deliveredOrders: statsRes.data.deliveredOrders || 0,
+              cancelledOrders: statsRes.data.cancelledOrders || 0,
+              totalRevenue: statsRes.data.totalRevenue || 0,
+              totalPlatformCommission:
+                statsRes.data.totalPlatformCommission || 0,
+              totalArtistEarnings: statsRes.data.totalArtistEarnings || 0,
+              totalShippingFees: statsRes.data.totalShippingFees || 0,
+              paidCommissions: statsRes.data.paidCommissions || 0,
+              unpaidCommissions: statsRes.data.unpaidCommissions || 0,
+            };
+            setOrderStats(statsData);
+            setChartStats({
+              totalOrders: statsData.totalOrders,
+              pendingOrders: statsData.pendingOrders,
+              paidOrders: statsData.paidOrders,
+              processingOrders: statsData.processingOrders,
+              shippingOrders: statsData.shippingOrders,
+              deliveredOrders: statsData.deliveredOrders,
+              cancelledOrders: statsData.cancelledOrders,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu:", err);
+        setError(err.message || "Không thể tải dữ liệu. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Lỗi khi tải dữ liệu:", err);
-      setError(err.message || "Không thể tải dữ liệu. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     fetchDashboardData();
@@ -443,24 +438,6 @@ export default function AdminDashboard() {
   const handleGlobalCustomDateFilter = () => {
     if (customFromDate && customToDate) {
       fetchAllDataWithFilter("custom", customFromDate, customToDate);
-    }
-  };
-
-  // Handle filter change - CHỈ ảnh hưởng biểu đồ
-  const handleFilterChange = (filterKey) => {
-    setTimeFilter(filterKey);
-    if (filterKey === "custom") {
-      setShowCustomDatePicker(true);
-    } else {
-      setShowCustomDatePicker(false);
-      fetchChartData(filterKey);
-    }
-  };
-
-  // Handle custom date filter
-  const handleCustomDateFilter = () => {
-    if (customFromDate && customToDate) {
-      fetchChartData("custom", customFromDate, customToDate);
     }
   };
 
@@ -499,12 +476,14 @@ export default function AdminDashboard() {
 
   // Loading state
   if (loading) {
-  return (
+    return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
-            <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-3" />
+          <div className="flex justify-center">
+            <div className="relative w-16 h-16">
+              <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
+              <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-0" />
+            </div>
           </div>
           <p className="text-slate-600 font-medium">Đang tải dữ liệu...</p>
         </div>
@@ -595,8 +574,8 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold mb-2">Tổng Quan Hệ Thống</h1>
             <p className="text-amber-100 text-lg">
-          Chào mừng bạn đến với bảng điều khiển quản lý ArtisanHub
-        </p>
+              Chào mừng bạn đến với bảng điều khiển quản lý ArtisanHub
+            </p>
           </div>
           <Button
             onClick={() => fetchDashboardData()}
@@ -616,9 +595,9 @@ export default function AdminDashboard() {
             <Calendar className="w-5 h-5 text-amber-500" />
             <span className="font-semibold">Lọc theo thời gian:</span>
           </div>
-          
+
           <div className="flex flex-wrap gap-2">
-            {TIME_FILTERS.filter(f => f.key !== "custom").map((filter) => (
+            {TIME_FILTERS.filter((f) => f.key !== "custom").map((filter) => (
               <button
                 key={filter.key}
                 onClick={() => handleGlobalFilterChange(filter.key)}
@@ -672,15 +651,18 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
-        
+
         {/* Current filter info */}
         <div className="mt-3 flex items-center gap-2 text-sm">
           <Filter className="w-4 h-4 text-slate-400" />
           <span className="text-slate-500">Đang xem:</span>
           <span className="font-semibold text-amber-600">
-            {TIME_FILTERS.find(f => f.key === timeFilter)?.label}
+            {TIME_FILTERS.find((f) => f.key === timeFilter)?.label}
             {timeFilter === "custom" && customFromDate && customToDate && (
-              <span className="text-slate-500 font-normal"> ({customFromDate} → {customToDate})</span>
+              <span className="text-slate-500 font-normal">
+                {" "}
+                ({customFromDate} → {customToDate})
+              </span>
             )}
           </span>
         </div>
@@ -734,17 +716,18 @@ export default function AdminDashboard() {
         {/* Order Status Pie Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-purple-50">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-violet-400 to-purple-500 rounded-xl shadow-lg shadow-violet-200">
                   <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-            <div>
+                <div>
                   <h2 className="text-xl font-bold text-slate-800">
                     📊 Thống Kê Đơn Hàng
                   </h2>
                   <p className="text-sm text-slate-500">
-                    Phân bổ trạng thái đơn hàng - {TIME_FILTERS.find(f => f.key === timeFilter)?.label}
+                    Phân bổ trạng thái đơn hàng -{" "}
+                    {TIME_FILTERS.find((f) => f.key === timeFilter)?.label}
                   </p>
                 </div>
               </div>
@@ -757,12 +740,6 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="p-6 relative">
-            {/* Loading overlay cho biểu đồ */}
-            {chartLoading && (
-              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
-                <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-              </div>
-            )}
             {chartStats.totalOrders > 0 ? (
               <div className="space-y-4">
                 {/* Donut Chart Visual */}
@@ -903,8 +880,8 @@ export default function AdminDashboard() {
                         <p className="text-xs text-slate-500">{item.label}</p>
                         <p className="text-lg font-bold text-slate-800">
                           {item.value.toLocaleString()}
-              </p>
-            </div>
+                        </p>
+                      </div>
                       <div className="ml-auto">
                         <span className="text-xs font-medium text-slate-500">
                           {chartStats.totalOrders > 0
@@ -915,7 +892,7 @@ export default function AdminDashboard() {
                             : 0}
                           %
                         </span>
-            </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -925,7 +902,9 @@ export default function AdminDashboard() {
                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShoppingCart className="w-10 h-10 text-slate-300" />
                 </div>
-                <p className="text-slate-500 font-medium">Chưa có đơn hàng trong khoảng thời gian này</p>
+                <p className="text-slate-500 font-medium">
+                  Chưa có đơn hàng trong khoảng thời gian này
+                </p>
               </div>
             )}
           </div>
@@ -934,12 +913,12 @@ export default function AdminDashboard() {
         {/* Commission & Revenue Stats - Báo cáo doanh thu thật */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl shadow-lg shadow-emerald-200">
                   <Wallet className="w-6 h-6 text-white" />
                 </div>
-            <div>
+                <div>
                   <h2 className="text-xl font-bold text-slate-800">
                     💰 Báo Cáo Doanh Thu Thật
                   </h2>
@@ -961,19 +940,21 @@ export default function AdminDashboard() {
                   </p>
                   <p className="text-emerald-200 text-xs mt-1">
                     Từ đơn hàng đã thanh toán thành công
-              </p>
-            </div>
+                  </p>
+                </div>
                 <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
                   <TrendingUp className="w-8 h-8" />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
             {/* Comparison Card - So sánh doanh thu */}
             <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-                  <p className="text-slate-500 text-sm">Tổng giá trị đơn hàng</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-slate-500 text-sm">
+                    Tổng giá trị đơn hàng
+                  </p>
                   <p className="text-xl font-bold text-slate-700">
                     {formatCurrency(orderStats.totalRevenue)}
                   </p>
@@ -986,10 +967,10 @@ export default function AdminDashboard() {
                   <p className="text-emerald-600 text-sm">Doanh thu thực</p>
                   <p className="text-xl font-bold text-emerald-600">
                     {formatCurrency(actualRevenue)}
-              </p>
+                  </p>
+                </div>
+              </div>
             </div>
-            </div>
-          </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
@@ -1006,7 +987,7 @@ export default function AdminDashboard() {
                 <p className="text-xs text-amber-600 mt-1">
                   Thu từ đơn hàng đã thanh toán
                 </p>
-        </div>
+              </div>
 
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                 <div className="flex items-center gap-2 mb-2">
@@ -1106,7 +1087,7 @@ export default function AdminDashboard() {
               <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg shadow-amber-200">
                 <Award className="w-6 h-6 text-white" />
               </div>
-            <div>
+              <div>
                 <h2 className="text-xl font-bold text-slate-800">
                   🏆 Top Sản Phẩm Bán Chạy
                 </h2>
@@ -1124,8 +1105,8 @@ export default function AdminDashboard() {
               </p>
               <p className="text-xs text-slate-500">Tổng đã bán</p>
             </div>
-            </div>
           </div>
+        </div>
         <div className="p-6">
           {bestSellingProducts.length > 0 ? (
             <div className="space-y-5">
@@ -1179,7 +1160,7 @@ export default function AdminDashboard() {
                             #{index + 1}
                           </div>
                         )}
-        </div>
+                      </div>
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
@@ -1227,9 +1208,9 @@ export default function AdminDashboard() {
                           {product.totalSold.toLocaleString()}
                         </p>
                         <p className="text-xs text-slate-500">đã bán</p>
-            </div>
-            </div>
-          </div>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1253,12 +1234,12 @@ export default function AdminDashboard() {
       {revenueTrend.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl shadow-lg shadow-emerald-200">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-            <div>
+                <div>
                   <h2 className="text-xl font-bold text-slate-800">
                     📈 Xu Hướng Doanh Thu
                   </h2>
@@ -1342,7 +1323,7 @@ export default function AdminDashboard() {
                             })}
                           </p>
                           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-slate-800" />
-            </div>
+                        </div>
 
                         {/* Value label */}
                         <span className="text-xs font-bold text-emerald-600 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1363,13 +1344,13 @@ export default function AdminDashboard() {
                         >
                           {/* Shine effect */}
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 group-hover:animate-shine" />
-            </div>
+                        </div>
                       </div>
                     );
                   })}
-          </div>
-        </div>
-      </div>
+                </div>
+              </div>
+            </div>
 
             {/* X-axis labels */}
             <div className="flex mt-3 ml-20">
@@ -1417,28 +1398,28 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                    <img
-                      src={product.image}
-                      alt={product.name}
+                      <img
+                        src={product.image}
+                        alt={product.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.src = "/images/placeholder.jpg";
                         }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 truncate">
-                      {product.name}
-                    </p>
+                        {product.name}
+                      </p>
                       <p className="text-sm text-slate-500 truncate">
                         {product.category} • {product.artist}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-amber-600">
-                      {formatCurrency(product.price)}
-                    </p>
-                  </div>
+                        {formatCurrency(product.price)}
+                      </p>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1453,7 +1434,7 @@ export default function AdminDashboard() {
               <div className="px-6 py-12 text-center">
                 <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">Chưa có sản phẩm nào</p>
-            </div>
+              </div>
             )}
           </div>
         </div>
@@ -1490,29 +1471,29 @@ export default function AdminDashboard() {
                       </p>
                       <p className="text-sm text-slate-500">{order.customer}</p>
                       <p className="text-xs text-slate-400">{order.date}</p>
-                  </div>
+                    </div>
                     <div className="text-right space-y-2">
                       <p className="font-semibold text-slate-800">
-                      {formatCurrency(order.amount)}
-                    </p>
-                    <span
+                        {formatCurrency(order.amount)}
+                      </p>
+                      <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        order.status
-                      )}`}
-                    >
-                      {getStatusText(order.status)}
-                    </span>
+                          order.status
+                        )}`}
+                      >
+                        {getStatusText(order.status)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-            </div>
               ))
             ) : (
               <div className="px-6 py-12 text-center">
                 <ShoppingCart className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-500">Chưa có đơn hàng nào</p>
-          </div>
+              </div>
             )}
-        </div>
+          </div>
         </div>
       </div>
     </div>

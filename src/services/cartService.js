@@ -7,8 +7,8 @@ export const cartService = {
       const response = await axiosClient.get("/api/Carts");
       return response;
     } catch (error) {
-      // Không log lỗi 401 - đây là trường hợp bình thường khi chưa đăng nhập
-      if (error?.status !== 401) {
+      // Không log lỗi 401, 403 - đây là trường hợp bình thường khi chưa đăng nhập hoặc không có quyền
+      if (error?.status !== 401 && error?.status !== 403) {
         console.error("Lỗi khi lấy danh sách sản phẩm trong giỏ hàng:", error);
       }
       throw error;

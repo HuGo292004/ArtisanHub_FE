@@ -321,12 +321,15 @@ export default function UserManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 bg-white rounded-2xl shadow-lg">
-        <div className="flex flex-col items-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-          <span className="text-slate-600 font-medium">
-            Đang tải dữ liệu...
-          </span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="relative w-16 h-16">
+              <div className="w-16 h-16 border-4 border-amber-200 rounded-full animate-pulse"></div>
+              <Loader2 className="w-16 h-16 text-amber-600 animate-spin absolute top-0 left-0" />
+            </div>
+          </div>
+          <p className="text-slate-600 font-medium">Đang tải dữ liệu...</p>
         </div>
       </div>
     );
