@@ -65,7 +65,21 @@ cd artisan-hub
 npm install
 ```
 
-### 3. Chạy development server
+### 3. Cấu hình biến môi trường
+
+Tạo file `.env` trong thư mục gốc:
+
+```bash
+# API Backend URL
+VITE_API_BASE_URL=http://localhost:5000/api
+
+# Frontend URL (cho PayOS returnUrl)
+# Development: để trống (sẽ tự động dùng window.location.origin)
+# Production: set URL deploy của bạn
+VITE_FRONTEND_URL=https://artisan-hub-project.vercel.app
+```
+
+### 4. Chạy development server
 
 ```bash
 npm run dev
@@ -73,17 +87,35 @@ npm run dev
 
 Mở [http://localhost:5173](http://localhost:5173) để xem kết quả.
 
-### 4. Build cho production
+### 5. Build cho production
 
 ```bash
 npm run build
 ```
 
-### 5. Preview production build
+### 6. Preview production build
 
 ```bash
 npm run preview
 ```
+
+## 🌐 Deploy lên Vercel
+
+### Cấu hình biến môi trường trên Vercel:
+
+1. Vào **Settings** → **Environment Variables**
+2. Thêm các biến sau:
+
+| Name                | Value                                    | Environment         |
+| ------------------- | ---------------------------------------- | ------------------- |
+| `VITE_API_BASE_URL` | `https://your-backend-api.com/api`       | Production, Preview |
+| `VITE_FRONTEND_URL` | `https://artisan-hub-project.vercel.app` | Production, Preview |
+
+**Lưu ý quan trọng:**
+
+- `VITE_FRONTEND_URL` phải là URL chính xác của frontend deploy (không có trailing slash `/`)
+- URL này được dùng để PayOS redirect về sau khi thanh toán
+- Đảm bảo domain đã được whitelist trong PayOS Dashboard (nếu cần)
 
 ## 🎨 Màu sắc chủ đạo
 
@@ -169,6 +201,28 @@ Chỉnh sửa trong `src/index.css`:
 - **Products**: Chỉnh sửa array `products` trong `Products.jsx`
 - **Artisans**: Chỉnh sửa array `artisans` trong `Artisans.jsx`
 - **Testimonials**: Chỉnh sửa array `testimonials` trong `Testimonials.jsx`
+
+## 💳 Cấu hình PayOS Payment
+
+### Flow thanh toán:
+
+1. User click "Thanh toán" → Frontend gửi `returnUrl` và `cancelUrl` cho Backend
+2. Backend tạo payment link PayOS với `returnUrl` = `https://artisan-hub-project.vercel.app/`
+3. User thanh toán xong → PayOS redirect về `https://artisan-hub-project.vercel.app/?code=00&status=PAID&orderCode=...`
+4. `PaymentCallback` component (render ở HomePage) tự động xử lý query params
+
+### Lưu ý quan trọng:
+
+- ✅ **Frontend URL**: Phải set `VITE_FRONTEND_URL` trên Vercel = `https://artisan-hub-project.vercel.app`
+- ✅ **Backend**: Phải nhận `returnUrl` và `cancelUrl` từ frontend và truyền cho PayOS
+- ✅ **PayOS Dashboard**: Đảm bảo domain `artisan-hub-project.vercel.app` được whitelist (nếu cần)
+- ✅ **Callback URL**: PayOS sẽ redirect về root URL `/` với query params, không phải `/payment/success`
+
+### Kiểm tra khi deploy:
+
+1. Đảm bảo biến môi trường `VITE_FRONTEND_URL` đã được set trên Vercel
+2. Test thanh toán và kiểm tra PayOS có redirect về đúng URL không
+3. Kiểm tra `PaymentCallback` component có xử lý được query params không
 
 ## 📄 License
 
