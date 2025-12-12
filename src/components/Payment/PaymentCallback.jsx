@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/contexts/CartContext";
 import { cartService } from "@/services/cartService";
 import { orderService } from "@/services/orderService";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Component xử lý callback từ PayOS khi thanh toán xong
@@ -17,11 +18,13 @@ const PaymentCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { loadCartItems } = useCart();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
 
   // Ref để đảm bảo chỉ xử lý 1 lần (tránh React Strict Mode gọi 2 lần)
   const isProcessed = useRef(false);
+  const toastShown = useRef(false); // Ref để đảm bảo chỉ hiển thị toast 1 lần
 
   useEffect(() => {
     const handlePaymentResult = async () => {
@@ -59,6 +62,21 @@ const PaymentCallback = () => {
         orderCode,
         code,
       });
+
+      // Hiển thị Toast notification
+      if (!toastShown.current) {
+        toastShown.current = true;
+        if (resultStatus === "success") {
+          toast.success(
+            `Thanh toán thành công! Mã đơn hàng: ${orderCode}`,
+            5000
+          );
+        } else if (resultStatus === "cancelled") {
+          toast.info("Thanh toán đã bị hủy", 4000);
+        } else if (resultStatus === "failed") {
+          toast.error("Thanh toán thất bại. Vui lòng thử lại.", 5000);
+        }
+      }
 
       // Gọi API cập nhật trạng thái đơn hàng
       const newStatus = resultStatus === "success" ? "PAID" : "CANCELLED";

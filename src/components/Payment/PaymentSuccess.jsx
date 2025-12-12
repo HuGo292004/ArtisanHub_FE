@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, XCircle, Loader2, Home, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/contexts/CartContext";
 import { cartService } from "@/services/cartService";
 import { orderService } from "@/services/orderService";
+import { useToast } from "@/components/ui/Toast";
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { clearCart, loadCartItems } = useCart();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const toastShown = useRef(false); // Ref để đảm bảo chỉ hiển thị toast 1 lần
 
   useEffect(() => {
     const handlePaymentResult = async () => {
@@ -42,6 +45,21 @@ const PaymentSuccess = () => {
         code,
       });
 
+      // Hiển thị Toast notification
+      if (!toastShown.current && orderCode) {
+        toastShown.current = true;
+        if (resultStatus === "success") {
+          toast.success(
+            `🎉 Thanh toán thành công! Mã đơn hàng: ${orderCode}`,
+            6000
+          );
+        } else if (resultStatus === "cancelled") {
+          toast.info("Thanh toán đã bị hủy", 4000);
+        } else if (resultStatus === "failed") {
+          toast.error("Thanh toán thất bại. Vui lòng thử lại.", 5000);
+        }
+      }
+
       // Gọi API cập nhật trạng thái đơn hàng
       if (orderCode) {
         try {
@@ -60,18 +78,24 @@ const PaymentSuccess = () => {
             console.log(
               `✓ Đã cập nhật trạng thái đơn hàng ${orderCode} thành ${newStatus}`
             );
-            
+
             // Nếu thanh toán thành công, gọi API tính hoa hồng
             if (resultStatus === "success") {
               try {
                 console.log(`Đang tính hoa hồng cho đơn hàng ${orderCode}...`);
-                const commissionResult = await orderService.calculateCommission(orderCode, "PAID");
+                const commissionResult = await orderService.calculateCommission(
+                  orderCode,
+                  "PAID"
+                );
                 console.log("Kết quả tính hoa hồng:", commissionResult);
-                
+
                 if (commissionResult?.isSuccess) {
                   console.log(`✓ Đã tính hoa hồng cho đơn hàng ${orderCode}`);
                 } else {
-                  console.warn("API tính hoa hồng không thành công:", commissionResult);
+                  console.warn(
+                    "API tính hoa hồng không thành công:",
+                    commissionResult
+                  );
                 }
               } catch (commissionError) {
                 console.error("Lỗi khi tính hoa hồng:", commissionError);
@@ -166,17 +190,17 @@ const PaymentSuccess = () => {
 
       setLoading(false);
 
-      // Auto redirect sau 5 giây nếu thành công
+      // Auto redirect sau 10 giây nếu thành công
       if (resultStatus === "success") {
         const timer = setTimeout(() => {
           navigate("/", { replace: true });
-        }, 5000);
+        }, 10000); // 10 giây
         return () => clearTimeout(timer);
       }
     };
 
     handlePaymentResult();
-  }, [searchParams, navigate, clearCart, loadCartItems]);
+  }, [searchParams, navigate, clearCart, loadCartItems, toast]);
 
   if (loading) {
     return (
@@ -216,7 +240,7 @@ const PaymentSuccess = () => {
                 ✓ Chúng tôi sẽ liên hệ với bạn sớm nhất
               </p>
               <p className="text-artisan-brown-300 text-sm">
-                ✓ Tự động chuyển về trang chủ sau 5 giây...
+                ✓ Tự động chuyển về trang chủ sau 10 giây...
               </p>
             </div>
           </div>
